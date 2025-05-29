@@ -16,16 +16,9 @@ class OV25_Product_Field {
 	 * Initialize the class.
 	 */
 	public static function init() {
-		// 1. Draw the input in the Product Data → General tab.
 		add_action( 'woocommerce_product_options_general_product_data', array( __CLASS__, 'add_product_field' ) );
-		
-		// 2. Save the value when the product is updated.
 		add_action( 'woocommerce_admin_process_product_object', array( __CLASS__, 'save_product_field' ) );
-		
-		// 3. Expose the field in the REST API.
 		add_action( 'init', array( __CLASS__, 'register_product_meta' ) );
-		
-		// Frontend display removed - keeping field admin-only
 	}
 	
 	/**
@@ -78,7 +71,4 @@ class OV25_Product_Field {
 			)
 		);
 	}
-}
-
-// Initialize the class.
-OV25_Product_Field::init(); 
+} 
