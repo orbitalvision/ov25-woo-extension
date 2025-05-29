@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Ov25 Woo Extension
- * Version: 0.1.2
+ * Version: 0.1.3
  * Author: The WordPress Contributors
  * Author URI: https://woo.com
  * Text Domain: ov25-woo-extension
