@@ -57,7 +57,11 @@ OV25.injectConfigurator({
         const element = document.querySelector('[data-ov25-iframe]');
         if (!element) return '';
         const data = element.getAttribute('data-ov25-iframe');
-        return data ? data.split('/')[1] : '';
+        if (!data) return '';
+        
+        // Split only on the first forward slash to separate API key from the rest of the path
+        const firstSlashIndex = data.indexOf('/');
+        return firstSlashIndex !== -1 ? data.substring(firstSlashIndex + 1) : '';
     },
     addToBasketFunction: () => {
             const form = document.querySelector('form.cart') as HTMLFormElement;
