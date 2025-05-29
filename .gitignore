@@ -39,7 +39,6 @@ github-token.php
 # Build files
 *.sql
 *.swp
-*.zip
 
 # Built packages
 build/
