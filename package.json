@@ -10,7 +10,21 @@
 		"build/**",
 		"vendor/**",
 		"languages/**",
-		"README.md"
+		"README.md",
+		"!vendor/bin/**",
+		"!vendor/composer/installed.json",
+		"!vendor/composer/installers/**",
+		"!**/tests/**",
+		"!**/test/**",
+		"!**/.git*",
+		"!**/phpunit.xml*",
+		"!**/composer.lock",
+		"!github-token.php",
+		"!.env*",
+		"!**/tokens/**",
+		"!**/*token*",
+		"!**/*secret*",
+		"!**/*credential*"
 	],
 	"scripts": {
 		"build": "wp-scripts build",
@@ -22,7 +36,11 @@
 		"plugin-zip": "wp-scripts plugin-zip",
 		"start": "wp-scripts start",
 		"postinstall": "composer install",
-		"check-types": "tsc --noEmit"
+		"check-types": "tsc --noEmit",
+		"release:patch": "npm run release -- patch",
+		"release:minor": "npm run release -- minor",
+		"release:major": "npm run release -- major",
+		"release": "node scripts/create-release.js"
 	},
 	"dependencies": {
 		"@woocommerce/components": "^10.3.0",

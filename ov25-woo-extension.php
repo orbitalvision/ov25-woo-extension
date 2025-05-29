@@ -6,6 +6,7 @@
  * Author URI: https://woo.com
  * Text Domain: ov25-woo-extension
  * Domain Path: /languages
+ * Update URI: https://github.com/orbitalvision/ov25-woo-extension
  *
  * License: GNU General Public License v3.0
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
@@ -22,6 +23,26 @@ if ( ! defined( 'MAIN_PLUGIN_FILE' ) ) {
 require_once plugin_dir_path( __FILE__ ) . '/vendor/autoload_packages.php';
 
 use Ov25WooExtension\Admin\Setup;
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
+// Initialize Plugin Update Checker for GitHub updates
+$ov25UpdateChecker = PucFactory::buildUpdateChecker(
+	'https://github.com/orbitalvision/ov25-woo-extension/', // Replace with your actual GitHub repo
+	__FILE__,
+	'ov25-woo-extension'
+);
+
+// Load GitHub token securely (only if file exists and not in production)
+$token_file = plugin_dir_path( __FILE__ ) . 'github-token.php';
+if ( file_exists( $token_file ) ) {
+	include_once $token_file;
+	if ( defined( 'OV25_GITHUB_TOKEN' ) ) {
+		$ov25UpdateChecker->setAuthentication( OV25_GITHUB_TOKEN );
+	}
+}
+
+// Optional: Set branch for stable releases (default is 'main')
+// $ov25UpdateChecker->setBranch('stable');
 
 // phpcs:disable WordPress.Files.FileName
 

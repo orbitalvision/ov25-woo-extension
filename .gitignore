@@ -1,4 +1,3 @@
-
 # Operating System files
 .DS_Store
 Thumbs.db
@@ -25,6 +24,17 @@ wp-cli.local.yml
 yarn-error.log
 npm-debug.log
 .pnpm-debug.log
+
+# Security - Never commit tokens or credentials
+.env
+.env.local
+.env.production
+config/tokens.php
+github-token.php
+**/tokens/**
+**/*token*
+**/*secret*
+**/*credential*
 
 # Build files
 *.sql

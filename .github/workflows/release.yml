@@ -1,0 +1,67 @@
+name: Build & Release Plugin
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          composer install --no-dev --optimize-autoloader
+
+      - name: Build plugin
+        run: |
+          npm run build
+
+      - name: Create plugin zip
+        run: |
+          npm run plugin-zip
+          ls -la *.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ov25-woo-extension.zip
+          name: "Release v${{ steps.version.outputs.version }}"
+          body: |
+            ## OV25 WooCommerce Extension v${{ steps.version.outputs.version }}
+            
+            ### Installation
+            1. Download the `ov25-woo-extension.zip` file
+            2. Upload to WordPress admin → Plugins → Add New → Upload Plugin
+            3. Activate the plugin
+            
+            ### Update
+            If you have the plugin installed, you should receive an automatic update notification.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
