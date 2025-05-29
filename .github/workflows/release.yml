@@ -17,7 +17,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -34,7 +33,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm ci
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
           composer install --no-dev --optimize-autoloader
 
       - name: Build plugin
