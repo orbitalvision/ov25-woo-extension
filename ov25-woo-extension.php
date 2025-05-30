@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OV25
  * Description: Show off your product catalogue in 3D, with the worlds most advanced product configurator. Inifinite variations, infinite possibilities.
- * Version: 0.1.22
+ * Version: 0.1.23
  * Author: Orbital Vision
  * Author URI: https://ov25.orbitalvision.com
  * Text Domain: ov25-woo-extension
@@ -16,6 +16,73 @@
  */
 
 defined( 'ABSPATH' ) || exit;
+
+// Kill switch - Check API endpoint before loading plugin
+if ( ! function_exists( 'ov25_check_kill_switch' ) ) {
+	function ov25_check_kill_switch() {
+		// Only check kill switch in admin to prevent frontend impact
+		if ( ! is_admin() ) {
+			return true;
+		}
+		
+		// Check transient first to avoid repeated API calls
+		$kill_switch_status = get_transient( 'ov25_kill_switch_status' );
+		if ( $kill_switch_status !== false ) {
+			return $kill_switch_status === 'active';
+		}
+		
+		// API endpoint to check
+		$api_url = 'https://webhooks.orbital.vision/api/woo-commerce/kill-switch';
+		
+		// Make the API request with short timeout
+		$response = wp_remote_get( $api_url, array(
+			'timeout' => 3,
+			'headers' => array(
+				'User-Agent' => 'OV25-Plugin/' . '0.1.22',
+			),
+		) );
+		
+		// Default to active if API is unreachable (fail-safe)
+		$is_active = true;
+		
+		if ( ! is_wp_error( $response ) ) {
+			$status_code = wp_remote_retrieve_response_code( $response );
+			$body = wp_remote_retrieve_body( $response );
+			
+			if ( $status_code === 200 ) {
+				$data = json_decode( $body, true );
+				// Expect response like: {"status": "active"} or {"status": "disabled"}
+				if ( isset( $data['status'] ) ) {
+					$is_active = ( $data['status'] === 'active' );
+				}
+			} elseif ( $status_code === 503 || $status_code === 423 ) {
+				// 503 Service Unavailable or 423 Locked = kill switch activated
+				$is_active = false;
+			}
+		}
+		
+		// Cache the result for 5 minutes to avoid repeated API calls
+		set_transient( 'ov25_kill_switch_status', $is_active ? 'active' : 'disabled', 5 * 60 );
+		
+		return $is_active;
+	}
+}
+
+// Check kill switch and exit early if disabled
+if ( ! ov25_check_kill_switch() ) {
+	// Log the kill switch activation
+	error_log( 'OV25 Woo Extension: Plugin disabled via kill switch' );
+	
+	// Show admin notice if in admin
+	if ( is_admin() ) {
+		add_action( 'admin_notices', function() {
+			echo '<div class="notice notice-warning"><p><strong>OV25 Plugin:</strong> Plugin temporarily disabled for maintenance.</p></div>';
+		} );
+	}
+	
+	// Exit early - don't load the rest of the plugin
+	return;
+}
 
 if ( ! defined( 'MAIN_PLUGIN_FILE' ) ) {
 	define( 'MAIN_PLUGIN_FILE', __FILE__ );
@@ -95,7 +162,7 @@ if ( ! class_exists( 'ov25_woo_extension' ) ) :
 		 *
 		 * @var string
 		 */
-		public $version = '0.1.22';
+		public $version = '0.1.23';
 
 		/**
 		 * Constructor.
