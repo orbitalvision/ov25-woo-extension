@@ -31,6 +31,9 @@ class OV25_Gallery_Hooks {
 			10,
 			2
 		);
+
+		// Fallback for Elementor and other page builders
+		add_action( 'wp_footer', [ __CLASS__, 'add_body_fallback' ] );
 	}
 
 	/* === Classic template ============================================ */
@@ -91,5 +94,22 @@ class OV25_Gallery_Hooks {
 			);
 		}
 		return $html;
+	}
+
+	/* === Fallback for page builders ================================= */
+
+	public static function add_body_fallback() {
+		if ( ! is_product() ) {
+			return;
+		}
+
+		$product = wc_get_product();
+		$prod_id = $product ? $product->get_meta( '_ov25_product_id', true ) : '';
+		$api_key = trim( get_option( 'ov25_api_key', '' ) );
+
+		if ( $prod_id && $api_key ) {
+			$attr = esc_attr( "{$api_key}/{$prod_id}" );
+			echo '<script>document.body.setAttribute("data-ov25-iframe", "' . $attr . '"); document.body.classList.add("ov25-gallery", "ov25-id-' . esc_attr( $prod_id ) . '");</script>';
+		}
 	}
 }

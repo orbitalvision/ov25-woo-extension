@@ -68,7 +68,7 @@ OV25.injectConfigurator({
                 form.submit();
             }
     },
-    galleryId: {id: '[data-ov25-iframe]', replace: false},
+    galleryId: {id: '.woocommerce-product-gallery', replace: false},
     variantsId: '[data-ov25-variants]',
     images: window.ov25Settings?.images || [],
     logoURL: window.ov25Settings?.logoURL || '',
