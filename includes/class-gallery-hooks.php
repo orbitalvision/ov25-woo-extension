@@ -109,7 +109,7 @@ class OV25_Gallery_Hooks {
 
 		if ( $prod_id && $api_key ) {
 			$attr = esc_attr( "{$api_key}/{$prod_id}" );
-			echo '<script>document.body.setAttribute("data-ov25-iframe", "' . $attr . '"); document.body.classList.add("ov25-gallery", "ov25-id-' . esc_attr( $prod_id ) . '");</script>';
+			echo '<div data-ov25-iframe="' . $attr . '" class="ov25-gallery ov25-id-' . esc_attr( $prod_id ) . '" style="display:none;"></div>';
 		}
 	}
 }
