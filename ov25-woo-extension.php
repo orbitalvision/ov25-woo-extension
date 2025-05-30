@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OV25
  * Description: Show off your product catalogue in 3D, with the worlds most advanced product configurator. Inifinite variations, infinite possibilities.
- * Version: 0.1.31
+ * Version: .0.1.32
  * Author: Orbital Vision
  * Author URI: https://ov25.orbitalvision.com
  * Text Domain: ov25-woo-extension
@@ -162,7 +162,7 @@ if ( ! class_exists( 'ov25_woo_extension' ) ) :
 		 *
 		 * @var string
 		 */
-		public $version = '0.1.31';
+		public $version = '.0.1.32';
 
 		/**
 		 * Constructor.
@@ -423,6 +423,29 @@ function ov25_woo_extension_init() {
 				return $item_data;
 			}
 		}, 10, 2 );
+		
+		// Display custom price in mini cart for OV25 configured products
+		add_filter( 'woocommerce_cart_item_price', function ( $price_html, $cart_item, $cart_item_key ) {
+			try {
+				if ( ! empty( $cart_item['cfg_price'] ) ) {
+					$price_major = $cart_item['cfg_price'] / 100;   // e.g. 120000 → 1200.00
+					
+					$args = array( 'price' => $price_major );
+					
+					if ( WC()->cart->display_prices_including_tax() ) {
+						$product_price = wc_get_price_including_tax( $cart_item['data'], $args );
+					} else {
+						$product_price = wc_get_price_excluding_tax( $cart_item['data'], $args );
+					}
+					
+					return wc_price( $product_price );
+				}
+				return $price_html;
+			} catch ( Exception $e ) {
+				error_log( 'OV25 Woo Extension: Error in cart item price - ' . $e->getMessage() );
+				return $price_html;
+			}
+		}, 10, 3 );
 		
 		add_action( 'woocommerce_before_calculate_totals', function ( $cart ) {
 			try {
