@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: OV25 Woo Extension
- * Description: A WooCommerce extension that integrates with OV25 configurator for infinite product variations in 3D.
+ * Plugin Name: OV25
+ * Description: Show off your catalogue in 3D, with the worlds most advanced product configurator. Inifinite variations, infinite possibilities.
  * Version: 0.1.4
  * Author: Orbital Vision
  * Author URI: https://ov25.orbitalvision.com
