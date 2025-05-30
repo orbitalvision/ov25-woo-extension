@@ -1,10 +1,14 @@
 # Release Process
 
-This plugin uses a **simplified release system** that builds locally and deploys to GitHub.
+This plugin uses a **simplified release system** that uses existing builds and deploys to GitHub.
 
 ## 🚀 Release Commands
 
 ```bash
+# Build when needed (separate step)
+npm run build
+npm run plugin-zip
+
 # Patch release (0.1.0 → 0.1.1) - Bug fixes
 npm run release:patch
 
@@ -17,22 +21,22 @@ npm run release:major
 
 ## 📋 What Happens Automatically
 
-When you run **any** release command, it automatically:
+### **Prerequisites:**
+- ✅ `ov25-woo-extension.zip` must exist (run `npm run plugin-zip` if needed)
 
-### **Local Steps:**
-1. ✅ **Builds** plugin assets (`npm run build`)
-2. ✅ **Creates** plugin zip (`npm run plugin-zip`)
-3. ✅ **Updates** version in `ov25-woo-extension.php`
-4. ✅ **Updates** version in `package.json`
-5. ✅ **Commits** version bump + zip file to git
-6. ✅ **Creates** version tag (e.g., `v0.2.0`)
-7. ✅ **Pushes** everything to GitHub
+### **Release Command Steps:**
+1. ✅ **Verifies** zip file exists
+2. ✅ **Updates** version in `ov25-woo-extension.php`
+3. ✅ **Updates** version in `package.json`
+4. ✅ **Commits** version bump + existing zip file to git
+5. ✅ **Creates** version tag (e.g., `v0.2.0`)
+6. ✅ **Pushes** everything to GitHub
 
 ### **GitHub Actions:**
-8. ✅ **Verifies** zip file exists in repo
-9. ✅ **Creates** GitHub release with the committed zip file
-10. ✅ **Plugin Update Checker** detects new version
-11. ✅ **Users** get update notifications
+7. ✅ **Verifies** zip file exists in repo
+8. ✅ **Creates** GitHub release with the committed zip file
+9. ✅ **Plugin Update Checker** detects new version
+10. ✅ **Users** get update notifications
 
 ## 🎯 Simple Workflow
 
@@ -41,7 +45,11 @@ When you run **any** release command, it automatically:
 git add .
 git commit -m "Add new feature"
 
-# Release it (builds locally, pushes zip + tag)
+# Build when needed (only if assets changed)
+npm run build
+npm run plugin-zip
+
+# Release it (uses existing zip)
 npm run release:minor
 
 # Done! ✨
@@ -49,7 +57,7 @@ npm run release:minor
 
 ## 📦 What Gets Released
 
-The zip file is built **locally** and includes:
+The zip file is built **separately** and includes:
 - ✅ `ov25-woo-extension.php` (with updated version)
 - ✅ `includes/**` (all plugin classes)
 - ✅ `build/**` (compiled JS/CSS)
@@ -68,8 +76,9 @@ The zip file is built **locally** and includes:
 
 **If release fails:**
 1. Ensure clean git working directory (`git status`)
-2. Check you have push permissions to repo
-3. Verify GitHub Actions logs
+2. Check that `ov25-woo-extension.zip` exists (`npm run plugin-zip` if missing)
+3. Check you have push permissions to repo
+4. Verify GitHub Actions logs
 
 **If GitHub Action fails:**
 - Check that `ov25-woo-extension.zip` was committed to the repo

@@ -48,7 +48,7 @@ try {
   }
   
   console.log(`🚀 New version: ${newVersion}`);
-  console.log(`\n📋 This will build, zip, and release everything automatically!`);
+  console.log(`\n📋 This will update version and create a release tag (using existing zip)`);
   
   // Check if git working directory is clean
   try {
@@ -58,13 +58,15 @@ try {
     process.exit(1);
   }
   
-  // Step 1: Build the plugin
-  runCommand('npm run build', 'Building plugin assets');
+  // Check if zip file exists
+  const zipFile = path.join(__dirname, '..', 'ov25-woo-extension.zip');
+  if (!fs.existsSync(zipFile)) {
+    console.error('\n❌ ov25-woo-extension.zip not found! Please run "npm run plugin-zip" first.');
+    process.exit(1);
+  }
+  console.log('✅ Found existing ov25-woo-extension.zip');
   
-  // Step 2: Create the zip
-  runCommand('npm run plugin-zip', 'Creating plugin zip');
-  
-  // Step 3: Update version in files locally (for consistency)
+  // Update version in files locally
   console.log(`🔄 Updating version to ${newVersion} in local files...`);
   
   // Update PHP plugin header
@@ -79,17 +81,17 @@ try {
   
   console.log(`✅ Version updated to ${newVersion} in local files`);
   
-  // Step 4: Commit version bump
-  runCommand('git add ov25-woo-extension.php package.json', 'Staging version changes');
+  // Commit version bump and existing zip
+  runCommand('git add ov25-woo-extension.php package.json ov25-woo-extension.zip', 'Staging version changes and zip');
   runCommand(`git commit -m "Bump version to ${newVersion}"`, 'Committing version bump');
   
-  // Step 5: Create and push tag
+  // Create and push tag
   runCommand(`git tag v${newVersion}`, `Creating tag v${newVersion}`);
   runCommand(`git push origin main`, 'Pushing version bump to main');
   runCommand(`git push origin v${newVersion}`, 'Pushing tag to GitHub');
   
   console.log(`\n🎉 Release ${newVersion} completed successfully!`);
-  console.log(`🔄 GitHub Actions will now create the official release with zip file.`);
+  console.log(`🔄 GitHub Actions will now create the official release with existing zip file.`);
   console.log(`📦 Plugin Update Checker will detect the new version automatically.`);
   console.log(`\n🔗 Monitor progress: https://github.com/orbitalvision/ov25-woo-extension/actions`);
   console.log(`📋 View releases: https://github.com/orbitalvision/ov25-woo-extension/releases`);
