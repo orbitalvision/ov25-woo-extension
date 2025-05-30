@@ -23,7 +23,6 @@ interface SkuPayload {
   [key: string]: any;
 }
 
-
 // ov25Ui.injectConfigurator({
 //     apiKey: () => { return window.ov25ConfiguratorApiKey },
 //     productLink: () => { return window.productMetafields.ov25.configuratorID }, 
