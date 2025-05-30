@@ -1,8 +1,8 @@
 # Release Process
 
-This plugin uses a **one-command release system** that builds, zips, and releases everything automatically.
+This plugin uses a **simplified release system** that builds locally and deploys to GitHub.
 
-## 🚀 One-Command Release
+## 🚀 Release Commands
 
 ```bash
 # Patch release (0.1.0 → 0.1.1) - Bug fixes
@@ -15,8 +15,6 @@ npm run release:minor
 npm run release:major
 ```
 
-**That's it!** One command does everything.
-
 ## 📋 What Happens Automatically
 
 When you run **any** release command, it automatically:
@@ -26,13 +24,13 @@ When you run **any** release command, it automatically:
 2. ✅ **Creates** plugin zip (`npm run plugin-zip`)
 3. ✅ **Updates** version in `ov25-woo-extension.php`
 4. ✅ **Updates** version in `package.json`
-5. ✅ **Commits** version bump to git
+5. ✅ **Commits** version bump + zip file to git
 6. ✅ **Creates** version tag (e.g., `v0.2.0`)
 7. ✅ **Pushes** everything to GitHub
 
 ### **GitHub Actions:**
-8. ✅ **Rebuilds** plugin (clean environment)
-9. ✅ **Creates** GitHub release with zip file
+8. ✅ **Verifies** zip file exists in repo
+9. ✅ **Creates** GitHub release with the committed zip file
 10. ✅ **Plugin Update Checker** detects new version
 11. ✅ **Users** get update notifications
 
@@ -43,7 +41,7 @@ When you run **any** release command, it automatically:
 git add .
 git commit -m "Add new feature"
 
-# Release it (builds, zips, releases everything)
+# Release it (builds locally, pushes zip + tag)
 npm run release:minor
 
 # Done! ✨
@@ -51,7 +49,7 @@ npm run release:minor
 
 ## 📦 What Gets Released
 
-The automated zip includes:
+The zip file is built **locally** and includes:
 - ✅ `ov25-woo-extension.php` (with updated version)
 - ✅ `includes/**` (all plugin classes)
 - ✅ `build/**` (compiled JS/CSS)
@@ -73,7 +71,11 @@ The automated zip includes:
 2. Check you have push permissions to repo
 3. Verify GitHub Actions logs
 
+**If GitHub Action fails:**
+- Check that `ov25-woo-extension.zip` was committed to the repo
+- The action just grabs the existing zip, no rebuilding
+
 **If Plugin Update Checker doesn't detect:**
 1. Check GitHub release was created successfully
-2. Ensure `github-token.php` exists locally (for private repo access)
+2. Make repository public (recommended)
 3. Verify version was bumped in plugin header 

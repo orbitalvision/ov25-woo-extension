@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: OV25
- * Description: Show off your catalogue in 3D, with the worlds most advanced product configurator. Inifinite variations, infinite possibilities.
+ * Description: Show off your product catalogue in 3D, with the worlds most advanced product configurator. Inifinite variations, infinite possibilities.
  * Version: 0.1.5
  * Author: Orbital Vision
  * Author URI: https://ov25.orbitalvision.com

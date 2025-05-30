@@ -1,4 +1,4 @@
-name: Build & Release Plugin
+name: Create Release from Local Build
 
 on:
   push:
@@ -10,19 +10,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.1'
-          tools: composer
 
       - name: Extract version from tag
         id: version
@@ -31,23 +18,15 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
-      - name: Install dependencies
+      - name: Verify zip file exists
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci --legacy-peer-deps
-          else
-            npm install --legacy-peer-deps
+          if [ ! -f "ov25-woo-extension.zip" ]; then
+            echo "❌ Error: ov25-woo-extension.zip not found!"
+            echo "Please build and commit the zip file locally before creating a release tag."
+            exit 1
           fi
-          composer install --no-dev --optimize-autoloader
-
-      - name: Build plugin
-        run: |
-          npm run build
-
-      - name: Create plugin zip
-        run: |
-          npm run plugin-zip
-          ls -la *.zip
+          echo "✅ Found ov25-woo-extension.zip"
+          ls -la ov25-woo-extension.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
