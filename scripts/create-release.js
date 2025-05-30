@@ -48,7 +48,7 @@ try {
   }
   
   console.log(`🚀 New version: ${newVersion}`);
-  console.log(`\n📋 This will update version and create a release tag (using existing zip)`);
+  console.log(`\n📋 This will create a release tag (using existing zip with matching version)`);
   
   // Check if git working directory is clean
   try {
@@ -66,28 +66,19 @@ try {
   }
   console.log('✅ Found existing ov25-woo-extension.zip');
   
-  // Update version in files locally
-  console.log(`🔄 Updating version to ${newVersion} in local files...`);
-  
-  // Update PHP plugin header
-  const phpFile = path.join(__dirname, '..', 'ov25-woo-extension.php');
-  let phpContent = fs.readFileSync(phpFile, 'utf8');
-  phpContent = phpContent.replace(/Version: .*/, `Version: ${newVersion}`);
-  fs.writeFileSync(phpFile, phpContent);
-  
-  // Update package.json version
+  // Update package.json version only (for npm consistency)
   packageJson.version = newVersion;
   fs.writeFileSync(packagePath, JSON.stringify(packageJson, null, '\t') + '\n');
   
-  console.log(`✅ Version updated to ${newVersion} in local files`);
+  console.log(`✅ Updated package.json to ${newVersion} (zip should already contain this version)`);
   
   // Commit version bump and existing zip
-  runCommand('git add ov25-woo-extension.php package.json ov25-woo-extension.zip', 'Staging version changes and zip');
-  runCommand(`git commit -m "Bump version to ${newVersion}"`, 'Committing version bump');
+  runCommand('git add package.json ov25-woo-extension.zip', 'Staging package.json and zip');
+  runCommand(`git commit -m "Release ${newVersion}"`, 'Committing release');
   
   // Create and push tag
   runCommand(`git tag v${newVersion}`, `Creating tag v${newVersion}`);
-  runCommand(`git push origin main`, 'Pushing version bump to main');
+  runCommand(`git push origin main`, 'Pushing release to main');
   runCommand(`git push origin v${newVersion}`, 'Pushing tag to GitHub');
   
   console.log(`\n🎉 Release ${newVersion} completed successfully!`);
@@ -99,4 +90,4 @@ try {
 } catch (error) {
   console.error('❌ Error:', error.message);
   process.exit(1);
-} 
+}

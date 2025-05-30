@@ -1,56 +1,58 @@
 # Release Process
 
-This plugin uses a **simplified release system** that uses existing builds and deploys to GitHub.
+This plugin uses a **simplified release system** where you manually manage versions before zipping.
 
-## 🚀 Release Commands
+## 🚀 Release Workflow
 
 ```bash
-# Build when needed (separate step)
+# 1. Update versions manually in both places
+# - Update "Version: X.X.X" in ov25-woo-extension.php header
+# - Update "public $version = 'X.X.X';" in ov25-woo-extension.php class
+
+# 2. Build and zip with correct versions
 npm run build
 npm run plugin-zip
 
-# Patch release (0.1.0 → 0.1.1) - Bug fixes
-npm run release:patch
-
-# Minor release (0.1.1 → 0.2.0) - New features
-npm run release:minor
-
-# Major release (0.2.0 → 1.0.0) - Breaking changes
-npm run release:major
+# 3. Release (only updates package.json for npm consistency)
+npm run release:patch   # or release:minor, release:major
 ```
 
 ## 📋 What Happens Automatically
 
 ### **Prerequisites:**
-- ✅ `ov25-woo-extension.zip` must exist (run `npm run plugin-zip` if needed)
+- ✅ **Manually update** both versions in `ov25-woo-extension.php`
+- ✅ `ov25-woo-extension.zip` must exist with correct versions
 
 ### **Release Command Steps:**
 1. ✅ **Verifies** zip file exists
-2. ✅ **Updates** version in `ov25-woo-extension.php`
-3. ✅ **Updates** version in `package.json`
-4. ✅ **Commits** version bump + existing zip file to git
-5. ✅ **Creates** version tag (e.g., `v0.2.0`)
-6. ✅ **Pushes** everything to GitHub
+2. ✅ **Updates** version in `package.json` only (for npm consistency)
+3. ✅ **Commits** package.json + existing zip file to git
+4. ✅ **Creates** version tag (e.g., `v0.2.0`)
+5. ✅ **Pushes** everything to GitHub
 
 ### **GitHub Actions:**
-7. ✅ **Verifies** zip file exists in repo
-8. ✅ **Creates** GitHub release with the committed zip file
-9. ✅ **Plugin Update Checker** detects new version
-10. ✅ **Users** get update notifications
+6. ✅ **Verifies** zip file exists in repo
+7. ✅ **Creates** GitHub release with the committed zip file
+8. ✅ **Plugin Update Checker** detects new version
+9. ✅ **Users** get update notifications
 
-## 🎯 Simple Workflow
+## 🎯 Complete Workflow Example
 
 ```bash
-# Make your changes
+# 1. Make your changes
 git add .
 git commit -m "Add new feature"
 
-# Build when needed (only if assets changed)
+# 2. Manually update BOTH versions in ov25-woo-extension.php:
+#    - Header: Version: 0.1.8
+#    - Class:  public $version = '0.1.8';
+
+# 3. Build with correct versions
 npm run build
 npm run plugin-zip
 
-# Release it (uses existing zip)
-npm run release:minor
+# 4. Release (auto-detects version from package.json bump)
+npm run release:patch
 
 # Done! ✨
 ```

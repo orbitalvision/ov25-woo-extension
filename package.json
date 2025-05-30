@@ -33,7 +33,7 @@
 		"lint:js": "wp-scripts lint-js",
 		"lint:ts": "eslint 'src/**/*.{ts,tsx}'",
 		"packages-update": "wp-scripts packages-update",
-		"plugin-zip": "wp-scripts plugin-zip",
+		"zip": "wp-scripts plugin-zip",
 		"start": "wp-scripts start",
 		"postinstall": "composer install",
 		"check-types": "tsc --noEmit",

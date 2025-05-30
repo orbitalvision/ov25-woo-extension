@@ -95,7 +95,7 @@ if ( ! class_exists( 'ov25_woo_extension' ) ) :
 		 *
 		 * @var string
 		 */
-		public $version = '0.1.3';
+		public $version = '0.1.8';
 
 		/**
 		 * Constructor.
