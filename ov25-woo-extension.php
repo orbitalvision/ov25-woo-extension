@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OV25
  * Description: Show off your product catalogue in 3D, with the worlds most advanced product configurator. Inifinite variations, infinite possibilities.
- * Version: .0.1.35
+ * Version: .0.1.37
  * Author: Orbital Vision
  * Author URI: https://ov25.orbitalvision.com
  * Text Domain: ov25-woo-extension
@@ -17,6 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/*
 // Kill switch - Check API endpoint before loading plugin
 if ( ! function_exists( 'ov25_check_kill_switch' ) ) {
 	function ov25_check_kill_switch() {
@@ -83,6 +84,7 @@ if ( ! ov25_check_kill_switch() ) {
 	// Exit early - don't load the rest of the plugin
 	return;
 }
+*/
 
 if ( ! defined( 'MAIN_PLUGIN_FILE' ) ) {
 	define( 'MAIN_PLUGIN_FILE', __FILE__ );
@@ -162,7 +164,7 @@ if ( ! class_exists( 'ov25_woo_extension' ) ) :
 		 *
 		 * @var string
 		 */
-		public $version = '.0.1.35';
+		public $version = '.0.1.37';
 
 		/**
 		 * Constructor.
@@ -319,6 +321,7 @@ function ov25_woo_extension_init() {
 					// Pass OV25 settings to frontend
 					wp_localize_script( 'ov25-frontend', 'ov25Settings', array(
 						'logoURL' => get_option( 'ov25_logo_url', '' ),
+						'mobileLogoURL' => get_option( 'ov25_mobile_logo_url', '' ),
 						'autoCarousel' => get_option( 'ov25_auto_carousel', 'no' ) === 'yes',
 						'deferThreeD' => get_option( 'ov25_defer_3d', 'yes' ) === 'yes',
 						'images' => function_exists( 'wc_get_product' ) ? ov25_get_product_images() : array(),

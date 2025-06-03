@@ -5,6 +5,7 @@ declare global {
     interface Window {
         ov25Settings: {
             logoURL: string;
+            mobileLogoURL: string;
             autoCarousel: boolean;
             deferThreeD: boolean;
             images: string[];
@@ -72,6 +73,7 @@ OV25.injectConfigurator({
     variantsId: '[data-ov25-variants]',
     images: window.ov25Settings?.images || [],
     logoURL: window.ov25Settings?.logoURL || '',
+    mobileLogoURL: window.ov25Settings?.mobileLogoURL !== '' && window.ov25Settings?.mobileLogoURL !== undefined ? window.ov25Settings?.mobileLogoURL : undefined,
     carouselId: window.ov25Settings?.autoCarousel ? true : false,
     deferThreeD: window.ov25Settings?.deferThreeD || false,
 });

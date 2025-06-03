@@ -52,6 +52,14 @@ class WC_Settings_Ov25 extends WC_Settings_Page {
 				'default'  => '',
 			),
 			array(
+				'title'    => __( 'Mobile Logo URL', 'ov25-woo-extension' ),
+				'desc'     => __( 'Enter the URL for your mobile logo (optional). If not provided, the regular logo will be used.', 'ov25-woo-extension' ),
+				'id'       => 'ov25_mobile_logo_url',
+				'type'     => 'text',
+				'desc_tip' => true,
+				'default'  => '',
+			),
+			array(
 				'title'    => __( 'Auto Carousel', 'ov25-woo-extension' ),
 				'desc'     => __( 'Enable automatic carousel functionality.', 'ov25-woo-extension' ),
 				'id'       => 'ov25_auto_carousel',

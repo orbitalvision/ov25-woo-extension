@@ -1,6 +1,6 @@
 {
 	"name": "ov25-woo-extension",
-	"version": "0.1.20",
+	"version": "0.1.7",
 	"author": "The WordPress Contributors",
 	"license": "GPL-3.0+",
 	"main": "build/index.js",
@@ -46,7 +46,7 @@
 		"@woocommerce/components": "^10.3.0",
 		"@wordpress/hooks": "^4.22.0",
 		"@wordpress/i18n": "^5.22.0",
-		"ov25-ui": "^0.3.43",
+		"ov25-ui": "^0.3.47",
 		"react": "^18.2.0",
 		"react-dom": "^18.2.0"
 	},
