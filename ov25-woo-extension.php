@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OV25
  * Description: Show off your product catalogue in 3D, with the worlds most advanced product configurator. Inifinite variations, infinite possibilities.
- * Version: .0.1.34
+ * Version: .0.1.35
  * Author: Orbital Vision
  * Author URI: https://ov25.orbitalvision.com
  * Text Domain: ov25-woo-extension
@@ -162,7 +162,7 @@ if ( ! class_exists( 'ov25_woo_extension' ) ) :
 		 *
 		 * @var string
 		 */
-		public $version = '.0.1.34';
+		public $version = '.0.1.35';
 
 		/**
 		 * Constructor.
@@ -362,42 +362,18 @@ function ov25_woo_extension_init() {
 						animation:ov25-flash 1s linear infinite;
 					}
 				';
+				
+				// Add custom CSS from settings
+				$custom_css = get_option( 'ov25_custom_css', '' );
+				if ( ! empty( trim( $custom_css ) ) ) {
+					$css .= "\n/* OV25 Custom CSS */\n" . $custom_css;
+				}
+				
 				wp_add_inline_style( 'ov25-dummy', $css );
 			} catch ( Exception $e ) {
 				error_log( 'OV25 Woo Extension: Error adding inline styles - ' . $e->getMessage() );
 			}
 		}, 18 );
-
-		// Inject custom CSS on OV25 product pages
-		add_action( 'wp_head', function () {
-			try {
-				if ( ! is_product() ) {
-					return;
-				}
-
-				// Only load custom CSS for products with OV25 Product ID
-				$product = wc_get_product();
-				if ( ! $product ) {
-					return;
-				}
-
-				$ov25_product_id = $product->get_meta( '_ov25_product_id', true );
-				if ( empty( $ov25_product_id ) ) {
-					return;
-				}
-
-				// Get custom CSS from settings
-				$custom_css = get_option( 'ov25_custom_css', '' );
-				if ( ! empty( trim( $custom_css ) ) ) {
-					echo '<style id="ov25-custom-css" type="text/css">' . "\n";
-					echo '/* OV25 Custom CSS */' . "\n";
-					echo $custom_css . "\n";
-					echo '</style>' . "\n";
-				}
-			} catch ( Exception $e ) {
-				error_log( 'OV25 Woo Extension: Error injecting custom CSS - ' . $e->getMessage() );
-			}
-		}, 100 );
 
 		add_action( 'woocommerce_checkout_create_order_line_item', function ( $item, $cart_item_key, $values ) {
 			try {
