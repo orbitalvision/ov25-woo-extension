@@ -46,7 +46,7 @@
 		"@woocommerce/components": "^10.3.0",
 		"@wordpress/hooks": "^4.22.0",
 		"@wordpress/i18n": "^5.22.0",
-		"ov25-ui": "^0.3.56",
+		"ov25-ui": "^0.3.58",
 		"react": "^18.2.0",
 		"react-dom": "^18.2.0"
 	},
