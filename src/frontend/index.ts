@@ -64,10 +64,11 @@ OV25.injectConfigurator({
         return firstSlashIndex !== -1 ? data.substring(firstSlashIndex + 1) : '';
     },
     addToBasketFunction: () => {
-            const form = document.querySelector('form.cart') as HTMLFormElement;
-            if (form) {
-                form.submit();
-            }
+        const form = document.querySelector('form.cart');
+        const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
+        if (submitButton) {
+            submitButton.click();
+        }
     },
     galleryId: {id: '.woocommerce-product-gallery', replace: true},
     variantsId: '[data-ov25-variants]',
