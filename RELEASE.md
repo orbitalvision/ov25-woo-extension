@@ -15,7 +15,12 @@ npm install ov25-ui@latest --legacy-peer-deps
 npm run build
 npm run zip
 
-# 3. Release (only updates package.json for npm consistency)
+# 3. Push new ZIP to git hub
+git add .
+git commmit -m {message}
+git push -u origin main
+
+# 4. Release (only updates package.json for npm consistency)
 npm run release:patch   # or release:minor, release:major
 ```
 
