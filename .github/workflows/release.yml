@@ -28,22 +28,23 @@ jobs:
           echo "✅ Found ov25-woo-extension.zip"
           ls -la ov25-woo-extension.zip
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ov25-woo-extension.zip
-          name: "Release v${{ steps.version.outputs.version }}"
-          body: |
-            ## OV25 WooCommerce Extension v${{ steps.version.outputs.version }}
-            
-            ### Installation
-            1. Download the `ov25-woo-extension.zip` file
-            2. Upload to WordPress admin → Plugins → Add New → Upload Plugin
-            3. Activate the plugin
-            
-            ### Update
-            If you have the plugin installed, you should receive an automatic update notification.
-          draft: false
-          prerelease: false
+      - name: Create Release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create release body
+          RELEASE_BODY="## OV25 WooCommerce Extension v${{ steps.version.outputs.version }}
+
+          ### Installation
+          1. Download the \`ov25-woo-extension.zip\` file
+          2. Upload to WordPress admin → Plugins → Add New → Upload Plugin
+          3. Activate the plugin
+
+          ### Update
+          If you have the plugin installed, you should receive an automatic update notification."
+
+          # Create the release and upload the asset
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --title "Release v${{ steps.version.outputs.version }}" \
+            --notes "$RELEASE_BODY" \
+            "ov25-woo-extension.zip" 
