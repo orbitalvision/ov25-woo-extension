@@ -18,6 +18,8 @@ const filesToCopy = ['Parsedown.php', 'ParsedownModern.php', 'PucReadmeParser.ph
 
 console.log('📦 Copying vendor files for plugin-update-checker...');
 
+let missingFiles = [];
+
 filesToCopy.forEach(file => {
     const src = path.join(vendorSrc, file);
     const dest = path.join(vendorDest, file);
@@ -26,8 +28,15 @@ filesToCopy.forEach(file => {
         fs.copyFileSync(src, dest);
         console.log(`✅ Copied ${file}`);
     } else {
-        console.warn(`⚠️ Warning: ${file} not found in source`);
+        console.error(`❌ Error: Required file ${file} not found in source`);
+        missingFiles.push(file);
     }
 });
+
+if (missingFiles.length > 0) {
+    console.error(`\n💥 Build failed: ${missingFiles.length} required file(s) missing:`);
+    missingFiles.forEach(file => console.error(`   - ${file}`));
+    process.exit(1);
+}
 
 console.log('✅ Vendor files prepared for build'); 
