@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OV25
  * Description: Show off your product catalogue in 3D, with the worlds most advanced product configurator. Inifinite variations, infinite possibilities.
- * Version: .0.1.68
+ * Version: .0.1.69
  * Author: Orbital Vision
  * Author URI: https://ov25.orbitalvision.com
  * Text Domain: ov25-woo-extension
@@ -164,7 +164,7 @@ if ( ! class_exists( 'ov25_woo_extension' ) ) :
 		 *
 		 * @var string
 		 */
-		public $version = '.0.1.68';
+		public $version = '.0.1.69';
 
 		/**
 		 * Constructor.
@@ -392,7 +392,7 @@ function ov25_woo_extension_init() {
 		/* 1. keep the cart-item fields that have already been  added */
 		add_filter( 'woocommerce_add_cart_item_data', function ( $item, $product_id ) {
 			try {
-				foreach ( [ 'cfg_price', 'cfg_payload', 'cfg_sku' ] as $key ) {
+				foreach ( [ 'cfg_price', 'cfg_payload', 'cfg_sku', 'cfg_skumap' ] as $key ) {
 					if ( isset( $_POST[ $key ] ) ) {
 						$item[ $key ] = wc_clean( wp_unslash( $_POST[ $key ] ) );
 					}
@@ -413,6 +413,16 @@ function ov25_woo_extension_init() {
 				if ( ! empty( $values['cfg_payload'] ) ) {
 					$item->add_meta_data( 'Configurator Data', $values['cfg_payload'], true );
 				}
+				if ( ! empty( $values['cfg_skumap'] ) ) {
+					$sku_map = json_decode( $values['cfg_skumap'], true );
+					if ( is_array( $sku_map ) ) {
+						foreach ( $sku_map as $key => $value ) {
+							if ( ! in_array( $key, [ 'Ranges', 'Products', 'Range', 'Product' ], true ) ) {
+								$item->add_meta_data( $key, $value, true );
+							}
+						}
+					}
+				}
 			} catch ( Exception $e ) {
 				error_log( 'OV25 Woo Extension: Error in checkout create order line item (SKU) - ' . $e->getMessage() );
 			}
@@ -428,6 +438,23 @@ function ov25_woo_extension_init() {
 						'display' => '', // leave blank so Woo just shows the value
 					);
 				}
+				
+				// Display individual skuMap items (excluding Range and Product)
+				if ( ! empty( $cart_item['cfg_skumap'] ) ) {
+					$sku_map = json_decode( $cart_item['cfg_skumap'], true );
+					if ( is_array( $sku_map ) ) {
+						foreach ( $sku_map as $key => $value ) {
+							if ( ! in_array( $key, [ 'Range', 'Product', 'Ranges', 'Products' ], true ) ) {
+								$item_data[] = array(
+									'key'     => esc_html( $key ),
+									'value'   => esc_html( $value ),
+									'display' => '',
+								);
+							}
+						}
+					}
+				}
+				
 				return $item_data;
 			} catch ( Exception $e ) {
 				error_log( 'OV25 Woo Extension: Error in get item data - ' . $e->getMessage() );

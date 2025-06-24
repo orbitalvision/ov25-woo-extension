@@ -137,6 +137,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (skuPayload.skuString) {
           ensureField('cfg_sku').value = skuPayload.skuString;
         }
+        if (skuPayload.skuMap) {
+          ensureField('cfg_skumap').value = JSON.stringify(skuPayload.skuMap);
+        }
       }
     }
   });
