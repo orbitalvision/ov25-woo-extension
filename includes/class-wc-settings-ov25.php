@@ -76,6 +76,14 @@ class WC_Settings_Ov25 extends WC_Settings_Page {
 				'default'  => 'no',
 			),
 			array(
+				'title'    => __( 'Show Optional', 'ov25-woo-extension' ),
+				'desc'     => __( 'Show an optional label on optional selections(fabrics, trims etc) on the configurator.', 'ov25-woo-extension' ),
+				'id'       => 'ov25_show_optional',
+				'type'     => 'checkbox',
+				'desc_tip' => true,
+				'default'  => 'no',
+			),
+			array(
 				'title'    => __( 'Custom CSS', 'ov25-woo-extension' ),
 				'desc'     => __( 'Add custom CSS that will be applied only on OV25 product pages. Use this to customize the appearance of the 3D configurator and product page elements.', 'ov25-woo-extension' ),
 				'id'       => 'ov25_custom_css',

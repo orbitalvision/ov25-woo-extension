@@ -8,6 +8,7 @@ declare global {
             mobileLogoURL: string;
             autoCarousel: boolean;
             deferThreeD: boolean;
+            showOptional: boolean;
             images: string[];
         };
     }
@@ -77,6 +78,7 @@ OV25.injectConfigurator({
     mobileLogoURL: window.ov25Settings?.mobileLogoURL !== '' && window.ov25Settings?.mobileLogoURL !== undefined ? window.ov25Settings?.mobileLogoURL : undefined,
     carouselId: window.ov25Settings?.autoCarousel ? true : false,
     deferThreeD: window.ov25Settings?.deferThreeD || false,
+    showOptional: window.ov25Settings?.showOptional || false,
 });
 
 

@@ -4,6 +4,7 @@ declare module 'ov25-ui' {
     productLink: string | (() => string);
     galleryId: string | { id: string; replace: boolean };
     variantsId?: string;
+    showOptional?: boolean;
     [key: string]: any;
   }): void;
 }
