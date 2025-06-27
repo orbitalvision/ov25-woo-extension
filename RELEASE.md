@@ -10,7 +10,7 @@ This plugin uses a **simplified release system** where you manually manage versi
 # - Update "public $version = 'X.X.X';" in ov25-woo-extension.php class
 #If you want to update the UI package, run:
 npm install ov25-ui@latest --legacy-peer-deps
-
+npm i --legacy-peer-deps
 # 2. Build and zip with correct versions
 npm run build
 npm run zip
