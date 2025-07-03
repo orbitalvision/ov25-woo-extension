@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OV25
  * Description: Show off your product catalogue in 3D, with the worlds most advanced product configurator. Inifinite variations, infinite possibilities.
- * Version: .0.1.75
+ * Version: 0.1.76
  * Author: Orbital Vision
  * Author URI: https://ov25.orbitalvision.com
  * Text Domain: ov25-woo-extension
@@ -164,7 +164,7 @@ if ( ! class_exists( 'ov25_woo_extension' ) ) :
 		 *
 		 * @var string
 		 */
-		public $version = '.0.1.75';
+		public $version = '0.1.76';
 
 		/**
 		 * Constructor.
@@ -392,11 +392,19 @@ function ov25_woo_extension_init() {
 		/* 1. keep the cart-item fields that have already been  added */
 		add_filter( 'woocommerce_add_cart_item_data', function ( $item, $product_id ) {
 			try {
-				foreach ( [ 'cfg_price', 'cfg_payload', 'cfg_sku', 'cfg_skumap' ] as $key ) {
+				foreach ( [ 'cfg_price', 'cfg_payload', 'cfg_sku', 'cfg_skumap', 'ov25-thumbnail' ] as $key ) {
 					if ( isset( $_POST[ $key ] ) ) {
 						$item[ $key ] = wc_clean( wp_unslash( $_POST[ $key ] ) );
 					}
 				}
+				
+				// Check if this is an OV25 product and try to generate thumbnail
+				$product = wc_get_product( $product_id );
+				if ( $product && $product->get_meta( '_ov25_product_id', true ) && empty( $item['ov25-thumbnail'] ) ) {
+					// Add a flag to indicate we need a thumbnail
+					$item['ov25-needs-thumbnail'] = true;
+				}
+				
 				return $item;
 			} catch ( Exception $e ) {
 				error_log( 'OV25 Woo Extension: Error in add cart item data - ' . $e->getMessage() );
@@ -422,6 +430,9 @@ function ov25_woo_extension_init() {
 							}
 						}
 					}
+				}
+				if ( ! empty( $values['ov25-thumbnail'] ) ) {
+					$item->add_meta_data( 'ov25-thumbnail', $values['ov25-thumbnail'], true );
 				}
 			} catch ( Exception $e ) {
 				error_log( 'OV25 Woo Extension: Error in checkout create order line item (SKU) - ' . $e->getMessage() );
@@ -509,6 +520,59 @@ function ov25_woo_extension_init() {
 			}
 		}, 1000 );
 
+		// Classic templates (cart.php, mini-cart widget, e-mails, etc.)
+		// Fires after any other thumbnail filters so our override "wins"
+		function ov25_override_classic_thumb( $thumb, $item, $key = null ) {
+			try {
+				if ( empty( $item['ov25-thumbnail'] ) ) {
+					return $thumb;
+				}
+
+				$src = esc_url( $item['ov25-thumbnail'] );
+				$alt = esc_attr( $item['data']->get_name() );
+
+				return "<img src='{$src}' alt='{$alt}' />";
+			} catch ( Exception $e ) {
+				error_log( 'OV25 Woo Extension: Error in classic thumbnail override - ' . $e->getMessage() );
+				return $thumb;
+			}
+		}
+		add_filter( 'woocommerce_cart_item_thumbnail', 'ov25_override_classic_thumb', 100, 3 );
+		add_filter( 'woocommerce_checkout_item_thumbnail', 'ov25_override_classic_thumb', 100, 3 );
+		add_filter( 'woocommerce_order_item_thumbnail', 'ov25_override_classic_thumb', 100, 3 );
+
+		// Cart & Checkout Blocks (Store API) – WooCommerce ≥ 9.6
+		// Swaps the image object in the API response
+		add_filter(
+			'woocommerce_store_api_cart_item_images',
+			function ( $images, $cart_item, $cart_item_key ) {
+				try {
+					if ( empty( $cart_item['ov25-thumbnail'] ) ) {
+						return $images; // nothing to do
+					}
+
+					$src = esc_url( $cart_item['ov25-thumbnail'] );
+
+					return [
+						(object) [
+							'id'        => 0,
+							'src'       => $src,
+							'thumbnail' => $src,
+							'srcset'    => '',
+							'sizes'     => '',
+							'name'      => '',
+							'alt'       => '',
+						],
+					];
+				} catch ( Exception $e ) {
+					error_log( 'OV25 Woo Extension: Error in store API cart item images - ' . $e->getMessage() );
+					return $images;
+				}
+			},
+			100,   // run after anything else
+			3
+		);
+
 	} catch ( Exception $e ) {
 		error_log( 'OV25 Woo Extension: Error in plugin initialization - ' . $e->getMessage() );
 	}
@@ -579,5 +643,8 @@ function ov25_woo_extension_add_settings( $settings ) {
 		return $settings;
 	}
 }
+
+
+
 
 

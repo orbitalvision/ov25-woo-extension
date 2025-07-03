@@ -11,12 +11,22 @@ declare global {
             showOptional: boolean;
             images: string[];
         };
+        ov25GenerateThumbnail: () => Promise<string>;
     }
 }
 
 interface PricePayload {
   formattedPrice: string;
+  formattedSubtotal: string;
+
   totalPrice: number;
+  subtotal: number;
+  
+  discount: {
+    amount: number,
+    formattedAmount: string,
+    percentage: number
+  }
   [key: string]: any;
 }
 
@@ -25,27 +35,7 @@ interface SkuPayload {
   [key: string]: any;
 }
 
-// ov25Ui.injectConfigurator({
-//     apiKey: () => { return window.ov25ConfiguratorApiKey },
-//     productLink: () => { return window.productMetafields.ov25.configuratorID }, 
-//     galleryId: { id: window.ov25ConfiguratorGalleryQuerySelector ?? '.product__media-wrapper', replace: true }, 
-//     carouselId: window.ov25ConfiguratorCarouselQuerySelector === 'auto-carousel-true' ? true : { id: window.ov25ConfiguratorCarouselQuerySelector ?? '', replace: true },
-//     variantsId: window.ov25ConfiguratorVariantsQuerySelector ?? '#ov25-configurator-controls-container',
-//     priceId: {id: window.ov25ConfiguratorPriceQuerySelector ?? '.price__regular .price-item', replace: true },
-//     nameId: {id: window.ov25ConfiguratorNameQuerySelector ?? '.product__title', replace: true },
-//     images: window.ov25ShopifyImages,
-//     buyNowFunction: () => {
-//       
-//     },
-//     addToBasketFunction: () => {
-//       document.querySelector('.form[action="/cart/add"] button[type="submit"]').click();
-//     },
-//     logoURL: window.ov25LogoURL,
-//     deferThreeD: window.ov25DeferThreeD,
-//   });
 
-
-// Initialize the configurator
 
 OV25.injectConfigurator({
     apiKey: () => {
@@ -64,15 +54,45 @@ OV25.injectConfigurator({
         const firstSlashIndex = data.indexOf('/');
         return firstSlashIndex !== -1 ? data.substring(firstSlashIndex + 1) : '';
     },
-    addToBasketFunction: () => {
+    addToBasketFunction: async () => {
         const form = document.querySelector('form.cart');
-        const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
-        if (submitButton) {
-            submitButton.click();
+        if (!form) return;
+
+        try {
+            // Generate thumbnail
+            const screenshotUrl = await window.ov25GenerateThumbnail();
+            
+            // Add thumbnail URL to form
+            const ensureField = (name: string): HTMLInputElement => {
+                let field = form.querySelector(`input[name="${name}"]`) as HTMLInputElement | null;
+                if (!field) {
+                    field = Object.assign(document.createElement('input'), {
+                        type: 'hidden',
+                        name,
+                    }) as HTMLInputElement;
+                    form.appendChild(field);
+                }
+                return field;
+            };
+
+            ensureField('ov25-thumbnail').value = screenshotUrl;
+            // Submit the form
+            const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+            if (submitButton) {
+                submitButton.click();
+            }
+        } catch (error) {
+            console.error('Failed to generate thumbnail:', error);
+            // Still submit the form even if thumbnail generation fails
+            const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+            if (submitButton) {
+                submitButton.click();
+            }
         }
     },
     galleryId: {id: '.woocommerce-product-gallery', replace: true},
     variantsId: '[data-ov25-variants]',
+    priceId: '[data-ov25-price]',
     images: window.ov25Settings?.images || [],
     logoURL: window.ov25Settings?.logoURL || '',
     mobileLogoURL: window.ov25Settings?.mobileLogoURL !== '' && window.ov25Settings?.mobileLogoURL !== undefined ? window.ov25Settings?.mobileLogoURL : undefined,
@@ -83,6 +103,70 @@ OV25.injectConfigurator({
 
 
 
+// CSS + JavaScript trick: Replace add to cart button
+document.addEventListener('DOMContentLoaded', () => {
+    const ov25Element = document.querySelector('[data-ov25-iframe]');
+    if (!ov25Element) return; // Not an OV25 product, skip
+
+    const form = document.querySelector('form.cart') as HTMLFormElement;
+    if (!form) return;
+
+    const originalButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+    if (!originalButton) return;
+
+    // Add CSS to hide the original button
+    const style = document.createElement('style');
+    style.textContent = `
+        form.cart button[type="submit"] {
+            display: none !important;
+        }
+        .ov25-replacement-button {
+            display: inline-block !important;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Create replacement button that looks identical
+    const replacementButton = originalButton.cloneNode(true) as HTMLButtonElement;
+    replacementButton.type = 'button'; // Not a submit button
+    replacementButton.className = originalButton.className + ' ov25-replacement-button';
+    
+    // Insert replacement button right after the original
+    originalButton.parentNode?.insertBefore(replacementButton, originalButton.nextSibling);
+
+    // Add click handler to replacement button
+    replacementButton.addEventListener('click', async (event) => {
+        event.preventDefault();
+        
+        // Show loading state
+        const originalText = replacementButton.textContent;
+        replacementButton.disabled = true;
+        replacementButton.textContent = 'Generating Preview...';
+
+        try {
+            // Generate thumbnail at this exact moment
+            const screenshotUrl = await window.ov25GenerateThumbnail();
+            
+            // Add thumbnail to form
+            const thumbnailField = document.createElement('input');
+            thumbnailField.type = 'hidden';
+            thumbnailField.name = 'ov25-thumbnail';
+            thumbnailField.value = screenshotUrl;
+            form.appendChild(thumbnailField);
+
+            // Now trigger the original button to submit the form
+            originalButton.click();
+        } catch (error) {
+            console.error('Failed to generate thumbnail:', error);
+            // Still submit the form even if thumbnail generation fails
+            originalButton.click();
+        } finally {
+            // Reset button state
+            replacementButton.disabled = false;
+            replacementButton.textContent = originalText;
+        }
+    });
+});
 
 /*  ov25-price-bridge.js  */
 /* ov25-price-and-sku-bridge.js */
@@ -98,16 +182,16 @@ document.addEventListener('DOMContentLoaded', () => {
       catch { return; }
     }
 
-    // Replace price skeleton
-    if (type === 'CURRENT_PRICE') {
-      const { formattedPrice, totalPrice } = payload as PricePayload;
-      if (formattedPrice && typeof totalPrice === 'number') {
-        document.querySelectorAll('[data-ov25-price]').forEach(el => {
-          el.classList.remove('ov25-price-skeleton');
-          (el as HTMLElement).innerHTML = formattedPrice;
-        });
-      }
-    }
+    // // Replace price skeleton
+    // if (type === 'CURRENT_PRICE') {
+    //   const { formattedPrice, totalPrice } = payload as PricePayload;
+    //   if (formattedPrice && typeof totalPrice === 'number') {
+    //     document.querySelectorAll('[data-ov25-price]').forEach(el => {
+    //       el.classList.remove('ov25-price-skeleton');
+    //       (el as HTMLElement).innerHTML = formattedPrice;
+    //     });
+    //   }
+    // }
 
     // Now stash hidden fields for price, payload, and sku
     if (type === 'CURRENT_PRICE' || type === 'CURRENT_SKU') {

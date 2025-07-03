@@ -70,6 +70,6 @@ class OV25_Price_Hook {
 	 * Return the placeholder markup.
 	 */
 	private static function skeleton_markup() {
-		return '<span class="ov25-price-skeleton woocommerce-Price-amount amount" data-ov25-price></span>';
+		return '<span class=" woocommerce-Price-amount amount" data-ov25-price></span>';
 	}
 }
