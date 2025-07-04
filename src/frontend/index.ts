@@ -10,6 +10,9 @@ declare global {
             deferThreeD: boolean;
             showOptional: boolean;
             images: string[];
+            gallerySelector: string;
+            variantsSelector: string;
+            priceSelector: string;
         };
         ov25GenerateThumbnail: () => Promise<string>;
     }
@@ -90,9 +93,9 @@ OV25.injectConfigurator({
             }
         }
     },
-    galleryId: {id: '.woocommerce-product-gallery', replace: true},
-    variantsId: '[data-ov25-variants]',
-    priceId: '[data-ov25-price]',
+    galleryId: {id: window.ov25Settings?.gallerySelector || '.woocommerce-product-gallery', replace: true},
+    variantsId: window.ov25Settings?.variantsSelector || '[data-ov25-variants]',
+    priceId: window.ov25Settings?.priceSelector || '[data-ov25-price]',
     images: window.ov25Settings?.images || [],
     logoURL: window.ov25Settings?.logoURL || '',
     mobileLogoURL: window.ov25Settings?.mobileLogoURL !== '' && window.ov25Settings?.mobileLogoURL !== undefined ? window.ov25Settings?.mobileLogoURL : undefined,
