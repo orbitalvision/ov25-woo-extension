@@ -34,7 +34,7 @@
 		"lint:ts": "eslint 'src/**/*.{ts,tsx}'",
 		"packages-update": "wp-scripts packages-update",
 		"prepare-build": "node scripts/prepare-build.js",
-		"zip": "npm run prepare-build && wp-scripts plugin-zip",
+		"zip": "npm run build && npm run prepare-build && wp-scripts plugin-zip",
 		"start": "wp-scripts start",
 		"postinstall": "composer install",
 		"check-types": "tsc --noEmit",
