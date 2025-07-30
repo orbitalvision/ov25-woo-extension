@@ -13,6 +13,7 @@ declare global {
             gallerySelector: string;
             variantsSelector: string;
             priceSelector: string;
+            customCSS: string;
         };
         ov25GenerateThumbnail: () => Promise<string>;
     }
@@ -102,6 +103,7 @@ OV25.injectConfigurator({
     carouselId: window.ov25Settings?.autoCarousel ? true : false,
     deferThreeD: window.ov25Settings?.deferThreeD || false,
     showOptional: window.ov25Settings?.showOptional || false,
+    cssString: window.ov25Settings?.customCSS || '',
 });
 
 

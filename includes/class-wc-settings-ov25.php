@@ -152,6 +152,19 @@ class WC_Settings_Ov25 extends WC_Settings_Page {
 	 */
 	public function save() {
 		$settings = $this->get_settings();
-		WC_Admin_Settings::save_fields( $settings );
+		
+		// Handle custom CSS field separately to prevent sanitization
+		if ( isset( $_POST['ov25_custom_css'] ) ) {
+			// Save CSS without sanitization to preserve special characters
+			update_option( 'ov25_custom_css', wp_unslash( $_POST['ov25_custom_css'] ) );
+		}
+		
+		// Filter out the CSS field from normal save process
+		$filtered_settings = array_filter( $settings, function( $setting ) {
+			return $setting['id'] !== 'ov25_custom_css';
+		} );
+		
+		// Save other fields normally
+		WC_Admin_Settings::save_fields( $filtered_settings );
 	}
 } 

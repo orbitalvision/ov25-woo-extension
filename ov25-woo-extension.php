@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OV25
  * Description: Show off your product catalogue in 3D, with the worlds most advanced product configurator. Inifinite variations, infinite possibilities.
- * Version: 0.1.79
+ * Version: 0.2.0
  * Author: Orbital Vision
  * Author URI: https://ov25.orbitalvision.com
  * Text Domain: ov25-woo-extension
@@ -164,7 +164,7 @@ if ( ! class_exists( 'ov25_woo_extension' ) ) :
 		 *
 		 * @var string
 		 */
-		public $version = '0.1.79';
+		public $version = '0.2.0';
 
 		/**
 		 * Constructor.
@@ -329,6 +329,7 @@ function ov25_woo_extension_init() {
 						'gallerySelector' => get_option( 'ov25_gallery_selector', '' ),
 						'variantsSelector' => get_option( 'ov25_variants_selector', '' ),
 						'priceSelector' => get_option( 'ov25_price_selector', '' ),
+						'customCSS' => get_option( 'ov25_custom_css', '' ),
 					) );
 				}
 
@@ -353,11 +354,11 @@ function ov25_woo_extension_init() {
 					return;
 				}
 		
-				/* 1. register Woo's core style as a "handle" we can piggy-back on */
+				/* Register dummy style for price skeleton animations */
 				wp_register_style( 'ov25-dummy', false );
-				wp_enqueue_style(  'ov25-dummy' );  // prints a <style id="ov25-dummy-css"> block
+				wp_enqueue_style( 'ov25-dummy' );
 		
-				/* 2. inject our rules right after */
+				/* Inject price skeleton styles */
 				$css = '
 					@keyframes ov25-flash { 0%,100%{opacity:.35} 50%{opacity:.15} }
 					.ov25-price-skeleton{
@@ -369,12 +370,6 @@ function ov25_woo_extension_init() {
 						animation:ov25-flash 1s linear infinite;
 					}
 				';
-				
-				// Add custom CSS from settings
-				$custom_css = get_option( 'ov25_custom_css', '' );
-				if ( ! empty( trim( $custom_css ) ) ) {
-					$css .= "\n/* OV25 Custom CSS */\n" . $custom_css;
-				}
 				
 				wp_add_inline_style( 'ov25-dummy', $css );
 			} catch ( Exception $e ) {
