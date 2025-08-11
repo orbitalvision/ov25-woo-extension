@@ -289,10 +289,6 @@ function ov25_woo_extension_init() {
 		add_action( 'wp_ajax_ov25_create_swatch_cart', 'ov25_ajax_create_swatch_cart' );
 		add_action( 'wp_ajax_nopriv_ov25_create_swatch_cart', 'ov25_ajax_create_swatch_cart' );
 
-		// AJAX handler for restoring original cart
-		add_action( 'wp_ajax_ov25_restore_original_cart', 'ov25_ajax_restore_original_cart' );
-		add_action( 'wp_ajax_nopriv_ov25_restore_original_cart', 'ov25_ajax_restore_original_cart' );
-
 		// Auto-restore original cart if user navigates away from Checkout (preserve main cart)
 		add_action( 'template_redirect', 'ov25_maybe_restore_original_cart_on_navigation' );
 
@@ -790,29 +786,6 @@ function ov25_ajax_create_swatch_cart() {
 	} catch ( Exception $e ) {
 		error_log( 'OV25 Woo Extension: Error creating swatch-only cart - ' . $e->getMessage() );
 		wp_send_json_error( 'Failed to create swatch-only cart: ' . $e->getMessage() );
-	}
-}
-
-/**
- * AJAX handler for restoring original cart.
- */
-function ov25_ajax_restore_original_cart() {
-	try {
-		$original_cart = WC()->session->get( 'ov25_original_cart' );
-		if ( $original_cart ) {
-			WC()->cart->empty_cart();
-			foreach ( $original_cart as $item ) {
-				WC()->cart->add_to_cart( $item['product_id'], $item['quantity'], $item['variation_id'], $item['variation'], $item['cart_item_data'] );
-			}
-			WC()->session->set( 'ov25_swatch_only_cart', false );
-			WC()->session->set( 'ov25_original_cart', null );
-			wp_send_json_success( 'Original cart restored successfully.' );
-		} else {
-			wp_send_json_error( 'No original cart found to restore.' );
-		}
-	} catch ( Exception $e ) {
-		error_log( 'OV25 Woo Extension: Error restoring original cart - ' . $e->getMessage() );
-		wp_send_json_error( 'Failed to restore original cart: ' . $e->getMessage() );
 	}
 }
 
