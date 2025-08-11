@@ -401,15 +401,7 @@ function ov25_woo_extension_init() {
 			}
 		}, 18 );
 
-		add_action( 'woocommerce_checkout_create_order_line_item', function ( $item, $cart_item_key, $values ) {
-			try {
-				if ( ! empty( $values['cfg_payload'] ) ) {
-					$item->add_meta_data( 'Configurator Data', $values['cfg_payload'] );
-				}
-			} catch ( Exception $e ) {
-				error_log( 'OV25 Woo Extension: Error in checkout create order line item - ' . $e->getMessage() );
-			}
-		}, 10, 3 );
+        
 
 		/* 1. keep the cart-item fields that have already been  added */
 		add_filter( 'woocommerce_add_cart_item_data', function ( $item, $product_id ) {
@@ -440,9 +432,6 @@ function ov25_woo_extension_init() {
 				if ( ! empty( $values['cfg_sku'] ) ) {
 					$item->add_meta_data( 'SKU', $values['cfg_sku'], true );
 				}
-				if ( ! empty( $values['cfg_payload'] ) ) {
-					$item->add_meta_data( 'Configurator Data', $values['cfg_payload'], true );
-				}
 				if ( ! empty( $values['cfg_skumap'] ) ) {
 					$sku_map = json_decode( $values['cfg_skumap'], true );
 					if ( is_array( $sku_map ) ) {
@@ -452,9 +441,6 @@ function ov25_woo_extension_init() {
 							}
 						}
 					}
-				}
-				if ( ! empty( $values['ov25-thumbnail'] ) ) {
-					$item->add_meta_data( 'ov25-thumbnail', $values['ov25-thumbnail'], true );
 				}
 				
 				// Add swatch data to order
