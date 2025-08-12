@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OV25
  * Description: Show off your product catalogue in 3D, with the worlds most advanced product configurator. Inifinite variations, infinite possibilities.
- * Version: 0.2.22
+ * Version: 0.2.23
  * Author: Orbital Vision
  * Author URI: https://ov25.orbitalvision.com
  * Text Domain: ov25-woo-extension
@@ -164,7 +164,7 @@ if ( ! class_exists( 'ov25_woo_extension' ) ) :
 		 *
 		 * @var string
 		 */
-		public $version = '0.2.22';
+		public $version = '0.2.23';
 
 		/**
 		 * Constructor.
@@ -397,8 +397,6 @@ function ov25_woo_extension_init() {
 			}
 		}, 18 );
 
-        
-
 		/* 1. keep the cart-item fields that have already been  added */
 		add_filter( 'woocommerce_add_cart_item_data', function ( $item, $product_id ) {
 			try {
@@ -438,7 +436,7 @@ function ov25_woo_extension_init() {
 						}
 					}
 				}
-				
+        
 				// Add swatch data to order
 				if ( ! empty( $values['swatch_name'] ) ) {
 					$item->add_meta_data( $values['swatch_option'], $values['swatch_name'], true );
@@ -577,12 +575,11 @@ function ov25_woo_extension_init() {
 				if ( empty( $item['ov25-thumbnail'] ) ) {
 					return $thumb;
 				}
-
-                $src = esc_url( $item['ov25-thumbnail'] );
-                $alt = '';
-                if ( isset( $item['data'] ) && is_object( $item['data'] ) && method_exists( $item['data'], 'get_name' ) ) {
-                    $alt = esc_attr( $item['data']->get_name() );
-                }
+        $src = esc_url( $item['ov25-thumbnail'] );
+        $alt = '';
+        if ( isset( $item['data'] ) && is_object( $item['data'] ) && method_exists( $item['data'], 'get_name' ) ) {
+            $alt = esc_attr( $item['data']->get_name() );
+        }
 
 				return "<img src='{$src}' alt='{$alt}' />";
 			} catch ( Exception $e ) {
