@@ -4,6 +4,32 @@ This plugin uses a **simplified release system** where you manually manage versi
 
 ## 🚀 Release Workflow
 
+
+### **PRE RELEASE TEST CHECKLIST**
+    - Check admin page loads (Woocommerce --> settings --> OV25 tab)
+    - Check Non OV25 Product (product page --> add to cart --> cart --> checkout --> order summary)
+    - Check OV25 product page
+        - configurator shown
+        - Variant controls are displayed
+        - selections can be made
+        - pricing comes through and updates with selections
+        - consider optional features (gallery, swatches, filters, discounts)
+        - check the same on mobile
+    - Add to cart
+        - correct SKU, prices, selections and thumbnail shown in side-cart
+        - correct SKU, prices, selections and thumbnail shown on main cart page
+        - can add multiple OV25 items, multiple non-OV25 items, or combinations.
+    - Checkout
+        - check with multiple OV25 items, multiple non-OV25 items, or combinations.
+        - correct SKU, prices, selections and thumbnail shown
+        - check that the prices add up manually for at least some scenarios
+    - Order Received page
+        - order can be made, and "Order Recieved" page is shown.
+        - correct prices and selections are shown
+        - all necessary informations is shown to identify the order.
+
+
+
 ```bash
 # 1. Update versions manually in both places
 # - Update "Version: X.X.X" in ov25-woo-extension.php header
