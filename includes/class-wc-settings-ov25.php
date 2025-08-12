@@ -127,6 +127,15 @@ class WC_Settings_Ov25 extends WC_Settings_Page {
 				'placeholder' => __( '[data-ov25-price]', 'ov25-woo-extension' ),
 			),
 			array(
+				'title'    => __( 'Swatches Selector', 'ov25-woo-extension' ),
+				'desc'     => __( 'Custom CSS selector for the swatches element. Default: [data-ov25-swatches]', 'ov25-woo-extension' ),
+				'id'       => 'ov25_swatches_selector',
+				'type'     => 'text',
+				'desc_tip' => true,
+				'default'  => '',
+				'placeholder' => __( '[data-ov25-swatches]', 'ov25-woo-extension' ),
+			),
+			array(
 				'type' => 'sectionend',
 				'id'   => 'ov25_selector_settings',
 			),

@@ -12,10 +12,14 @@ declare global {
             images: string[];
             gallerySelector: string;
             variantsSelector: string;
+            swatchesSelector: string;
             priceSelector: string;
             customCSS: string;
+            swatchProductId?: string;
         };
         ov25GenerateThumbnail: () => Promise<string>;
+        wc_price?: (price: number) => string;
+        jQuery?: any;
     }
 }
 
@@ -39,7 +43,30 @@ interface SkuPayload {
   [key: string]: any;
 }
 
+export interface Swatch {
+  name: string;
+  option: string;
+  manufacturerId: string;
+  description: string;
+  thumbnail: {
+    blurHash: string;
+    thumbnail: string;
+    miniThumbnails: {
+      large: string;
+      medium: string;
+      small: string;
+    }
+  };
+}
 
+export type SwatchRulesData = {
+  freeSwatchLimit: number; 
+  canExeedFreeLimit: boolean;
+  pricePerSwatch: number; 
+  minSwatches: number;
+  maxSwatches: number;
+  enabled: boolean; 
+}
 
 OV25.injectConfigurator({
     apiKey: () => {
@@ -94,8 +121,28 @@ OV25.injectConfigurator({
             }
         }
     },
+    addSwatchesToCartFunction: async (swatches: Swatch[], rules: SwatchRulesData) => {
+        if (!swatches.length || !rules.enabled) {
+            return;
+        }
+
+        // Calculate pricing based on rules
+        const totalSwatches = swatches.length;
+        const freeSwatches = Math.min(rules.freeSwatchLimit, totalSwatches);
+        const paidSwatches = Math.max(0, totalSwatches - freeSwatches);
+
+        try {
+            // Store current cart, create a swatch-only cart and redirect to normal checkout
+            const checkoutUrl = await createSwatchOnlyCart(swatches, rules);
+            const redirectUrl = checkoutUrl || (window as any).ov25CheckoutUrl || window.location.origin + '/checkout/';
+            window.location.href = redirectUrl;
+        } catch (error) {
+            console.error('Failed to create swatch cart:', error);
+        }
+    },
     galleryId: {id: window.ov25Settings?.gallerySelector || '.woocommerce-product-gallery', replace: true},
     variantsId: window.ov25Settings?.variantsSelector || '[data-ov25-variants]',
+    swatchesId: window.ov25Settings?.swatchesSelector || '[data-ov25-swatches]',
     priceId: window.ov25Settings?.priceSelector || '[data-ov25-price]',
     images: window.ov25Settings?.images || [],
     logoURL: window.ov25Settings?.logoURL || '',
@@ -334,3 +381,39 @@ document.addEventListener('DOMContentLoaded', () => {
 //     if (latestState) render(latestState);
 //   });
 // }); 
+
+// Helper function to create a swatch-only cart session
+async function createSwatchOnlyCart(swatches: Swatch[], rules: SwatchRulesData): Promise<string | undefined> {
+    try {
+        // Create swatch cart data
+        const swatchCartData = {
+            swatches: swatches,
+            rules: rules,
+            timestamp: Date.now()
+        };
+
+        // Send to backend to create swatch-only cart
+        const response = await fetch(window.location.origin + '/wp-admin/admin-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=ov25_create_swatch_cart&swatch_data=' + encodeURIComponent(JSON.stringify(swatchCartData))
+        });
+
+        if (!response.ok) {
+            throw new Error('Network error creating swatch cart');
+        }
+
+        const result = await response.json();
+        if (!result?.success) {
+            throw new Error(result?.data || 'Failed to create swatch cart');
+        }
+
+        const checkoutUrl = result.data?.checkout_url as string | undefined;
+        if (checkoutUrl) { (window as any).ov25CheckoutUrl = checkoutUrl; }
+        return checkoutUrl;
+    } catch (error) {
+        throw error;
+    }
+}
