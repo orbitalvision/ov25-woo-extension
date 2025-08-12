@@ -807,10 +807,10 @@ function ov25_maybe_restore_original_cart_on_navigation() {
         return;
     }
 
-    // Restore
+    // Restore (always clear current cart; re-add original items if any)
     $original_cart = WC()->session->get( 'ov25_original_cart' );
-    if ( $original_cart ) {
-        WC()->cart->empty_cart();
+    WC()->cart->empty_cart();
+    if ( is_array( $original_cart ) ) {
         foreach ( $original_cart as $item ) {
             $product_id   = isset( $item['product_id'] ) ? (int) $item['product_id'] : 0;
             $quantity     = isset( $item['quantity'] ) ? (int) $item['quantity'] : 1;
