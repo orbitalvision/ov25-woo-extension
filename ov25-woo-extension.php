@@ -145,6 +145,14 @@ function ov25_woo_extension_activate() {
 		add_action( 'admin_notices', 'ov25_woo_extension_missing_wc_notice' );
 		return;
 	}
+
+	// Ensure Swatches page exists and flush permalinks so /swatches works immediately
+	if ( function_exists( 'ov25_ensure_swatches_page_exists' ) ) {
+		ov25_ensure_swatches_page_exists();
+	}
+	if ( function_exists( 'flush_rewrite_rules' ) ) {
+		flush_rewrite_rules();
+	}
 }
 
 if ( ! class_exists( 'ov25_woo_extension' ) ) :
@@ -219,6 +227,9 @@ endif;
 
 add_action( 'plugins_loaded', 'ov25_woo_extension_init', 10 );
 
+// Ensure Swatches page exists even if WooCommerce is inactive in this environment
+add_action( 'init', 'ov25_ensure_swatches_page_exists' );
+
 /**
  * Initialize the plugin.
  *
@@ -282,8 +293,31 @@ function ov25_woo_extension_init() {
 			}
 		}
 
+		// Load Swatches API and Page
+		$swatch_api_file = __DIR__ . '/includes/class-swatch-api.php';
+		if ( file_exists( $swatch_api_file ) ) {
+			include_once $swatch_api_file;
+			if ( class_exists( 'OV25_Swatch_API' ) ) {
+				OV25_Swatch_API::init();
+			}
+		}
+
+		$swatch_page_file = __DIR__ . '/includes/class-swatch-page.php';
+		if ( file_exists( $swatch_page_file ) ) {
+			include_once $swatch_page_file;
+			if ( class_exists( 'OV25_Swatch_Page' ) ) {
+				OV25_Swatch_Page::init();
+			}
+		}
+
 		// Create swatch product on plugin activation
 		add_action( 'init', 'ov25_ensure_swatch_product_exists' );
+
+		// Ensure a public Swatches page exists at /swatches/
+		add_action( 'init', 'ov25_ensure_swatches_page_exists' );
+
+		// If permalinks are plain, make /swatches redirect to the page_id URL
+		add_action( 'template_redirect', 'ov25_swatches_plain_permalink_redirect' );
 
 		// AJAX handler for creating swatch-only cart
 		add_action( 'wp_ajax_ov25_create_swatch_cart', 'ov25_ajax_create_swatch_cart' );
@@ -729,6 +763,113 @@ function ov25_ensure_swatch_product_exists() {
 /** Get the swatch product ID. */
 function ov25_get_swatch_product_id() {
     return get_option( 'ov25_swatch_product_id' );
+}
+
+/**
+ * Ensure a Swatches page exists at the configured slug containing the shortcode.
+ */
+function ov25_ensure_swatches_page_exists() {
+    try {
+        // Check if swatches page is enabled
+        $show_swatches_page = get_option( 'ov25_show_swatches_page', 'no' );
+        $page_slug = sanitize_title( get_option( 'ov25_swatches_page_slug', 'swatches' ) );
+        $page_title = sanitize_text_field( get_option( 'ov25_swatches_page_title', 'Swatches' ) );
+        $show_in_nav = get_option( 'ov25_swatches_show_in_nav', 'no' );
+        
+        $page_id = (int) get_option( 'ov25_swatches_page_id', 0 );
+        
+        if ( $show_swatches_page === 'yes' ) {
+            // Swatches page should be visible
+            $needs_create = true;
+            $needs_update = false;
+
+            if ( $page_id > 0 ) {
+                $page = get_post( $page_id );
+                if ( $page && $page->post_status !== 'trash' ) {
+                    // Check if the page slug, title, and visibility match the current settings
+                    $current_visibility = $show_in_nav === 'yes' ? 'publish' : 'private';
+                    if ( $page->post_name === $page_slug && $page->post_title === $page_title && $page->post_status === $current_visibility ) {
+                        $needs_create = false;
+                    } else {
+                        // Slug, title, or visibility changed, update the existing page
+                        $update_data = [ 'ID' => $page_id ];
+                        if ( $page->post_name !== $page_slug ) {
+                            $update_data['post_name'] = $page_slug;
+                        }
+                        if ( $page->post_title !== $page_title ) {
+                            $update_data['post_title'] = $page_title;
+                        }
+                        if ( $page->post_status !== $current_visibility ) {
+                            $update_data['post_status'] = $current_visibility;
+                        }
+                        wp_update_post( $update_data );
+                        $needs_create = false;
+                    }
+                }
+            }
+
+            if ( $needs_create ) {
+                // Check if a page with this slug already exists
+                $existing = get_page_by_path( $page_slug, OBJECT, 'page' );
+                if ( $existing && $existing->post_status !== 'trash' ) {
+                    update_option( 'ov25_swatches_page_id', $existing->ID );
+                    return;
+                }
+
+                $page_status = $show_in_nav === 'yes' ? 'publish' : 'private';
+                $page_id = wp_insert_post( [
+                    'post_title'   => $page_title,
+                    'post_name'    => $page_slug,
+                    'post_status'  => $page_status,
+                    'post_type'    => 'page',
+                    'post_content' => '[ov25_swatches]',
+                ] );
+
+                if ( $page_id && ! is_wp_error( $page_id ) ) {
+                    update_option( 'ov25_swatches_page_id', $page_id );
+                }
+            }
+        } else {
+            // Swatches page should be hidden - move to trash if it exists
+            if ( $page_id > 0 ) {
+                $page = get_post( $page_id );
+                if ( $page && $page->post_status !== 'trash' ) {
+                    wp_trash_post( $page_id );
+                }
+            }
+        }
+    } catch ( Exception $e ) {
+        error_log( 'OV25 Woo Extension: Error ensuring Swatches page - ' . $e->getMessage() );
+    }
+}
+
+/**
+ * If permalinks are set to Plain (/?page_id=), redirect the swatches page URL to the page's canonical link.
+ */
+function ov25_swatches_plain_permalink_redirect() {
+    if ( ! function_exists( 'get_option' ) ) return;
+    
+    // Check if swatches page is enabled
+    $show_swatches_page = get_option( 'ov25_show_swatches_page', 'no' );
+    if ( $show_swatches_page !== 'yes' ) return;
+    
+    $structure = get_option( 'permalink_structure' );
+    if ( ! empty( $structure ) ) return; // Pretty permalinks enabled
+
+    $page_slug = sanitize_title( get_option( 'ov25_swatches_page_slug', 'swatches' ) );
+    
+    // Only act on exact /{page_slug} (with or without trailing slash)
+    $req_uri = isset( $_SERVER['REQUEST_URI'] ) ? strtok( $_SERVER['REQUEST_URI'], '?' ) : '';
+    if ( ! in_array( rtrim( $req_uri, '/' ), [ '/' . $page_slug ], true ) ) return;
+
+    $page_id = (int) get_option( 'ov25_swatches_page_id', 0 );
+    if ( $page_id <= 0 ) return;
+    $link = get_permalink( $page_id );
+    if ( ! $link ) return;
+
+    // If permalink structure is plain, get_permalink will already be ?page_id=...
+    wp_safe_redirect( $link, 301 );
+    exit;
 }
 
 /**

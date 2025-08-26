@@ -47,12 +47,16 @@
 		"@woocommerce/components": "^10.3.0",
 		"@wordpress/hooks": "^4.22.0",
 		"@wordpress/i18n": "^5.22.0",
-		"ov25-ui": "^0.4.46",
+		"lucide-react": "^0.540.0",
+		"ov25-ui": "^0.4.53",
 		"react": "^18.2.0",
-		"react-dom": "^18.2.0"
+		"react-dom": "^18.2.0",
+		"sonner": "^2.0.7"
 	},
 	"devDependencies": {
 		"@types/node": "^14.14.31",
+		"@types/react": "^19.1.10",
+		"@types/react-dom": "^19.1.7",
 		"@typescript-eslint/eslint-plugin": "^5.48.0",
 		"@typescript-eslint/parser": "^5.48.0",
 		"@woocommerce/dependency-extraction-webpack-plugin": "^2.2.0",
