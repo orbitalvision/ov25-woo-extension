@@ -7,6 +7,7 @@ module.exports = {
 	entry: {
 		...defaultConfig.entry,
 		'frontend': './src/frontend/index.ts',
+		'swatches': './src/swatches/index.tsx',
 	},
 	module: {
 		...defaultConfig.module,

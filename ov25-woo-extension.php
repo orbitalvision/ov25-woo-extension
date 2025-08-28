@@ -145,6 +145,14 @@ function ov25_woo_extension_activate() {
 		add_action( 'admin_notices', 'ov25_woo_extension_missing_wc_notice' );
 		return;
 	}
+
+	// Ensure Swatches page exists and flush permalinks so /swatches works immediately
+	if ( function_exists( 'ov25_ensure_swatches_page_exists' ) ) {
+		ov25_ensure_swatches_page_exists();
+	}
+	if ( function_exists( 'flush_rewrite_rules' ) ) {
+		flush_rewrite_rules();
+	}
 }
 
 if ( ! class_exists( 'ov25_woo_extension' ) ) :
@@ -219,6 +227,9 @@ endif;
 
 add_action( 'plugins_loaded', 'ov25_woo_extension_init', 10 );
 
+// Ensure Swatches page exists even if WooCommerce is inactive in this environment
+add_action( 'init', 'ov25_ensure_swatches_page_exists' );
+
 /**
  * Initialize the plugin.
  *
@@ -274,6 +285,47 @@ function ov25_woo_extension_init() {
 			}
 		}
 
+		$swatches_hook_file = __DIR__ . '/includes/class-swatches-hook.php';
+		if ( file_exists( $swatches_hook_file ) ) {
+			include_once $swatches_hook_file;
+			if ( class_exists( 'OV25_Swatches_Hook' ) ) {
+				OV25_Swatches_Hook::init();
+			}
+		}
+
+		// Load Swatches API and Page
+		$swatch_api_file = __DIR__ . '/includes/class-swatch-api.php';
+		if ( file_exists( $swatch_api_file ) ) {
+			include_once $swatch_api_file;
+			if ( class_exists( 'OV25_Swatch_API' ) ) {
+				OV25_Swatch_API::init();
+			}
+		}
+
+		$swatch_page_file = __DIR__ . '/includes/class-swatch-page.php';
+		if ( file_exists( $swatch_page_file ) ) {
+			include_once $swatch_page_file;
+			if ( class_exists( 'OV25_Swatch_Page' ) ) {
+				OV25_Swatch_Page::init();
+			}
+		}
+
+		// Create swatch product on plugin activation
+		add_action( 'init', 'ov25_ensure_swatch_product_exists' );
+
+		// Ensure a public Swatches page exists at /swatches/
+		add_action( 'init', 'ov25_ensure_swatches_page_exists' );
+
+		// If permalinks are plain, make /swatches redirect to the page_id URL
+		add_action( 'template_redirect', 'ov25_swatches_plain_permalink_redirect' );
+
+		// AJAX handler for creating swatch-only cart
+		add_action( 'wp_ajax_ov25_create_swatch_cart', 'ov25_ajax_create_swatch_cart' );
+		add_action( 'wp_ajax_nopriv_ov25_create_swatch_cart', 'ov25_ajax_create_swatch_cart' );
+
+		// Auto-restore original cart if user navigates away from Checkout (preserve main cart)
+		add_action( 'template_redirect', 'ov25_maybe_restore_original_cart_on_navigation' );
+
 		// Load loop button hook with error handling
 		$loop_button_file = dirname( __FILE__ ) . '/includes/class-loop-button-hook.php';
 		if ( file_exists( $loop_button_file ) ) {
@@ -328,8 +380,10 @@ function ov25_woo_extension_init() {
 						'images' => function_exists( 'wc_get_product' ) ? ov25_get_product_images() : array(),
 						'gallerySelector' => get_option( 'ov25_gallery_selector', '' ),
 						'variantsSelector' => get_option( 'ov25_variants_selector', '' ),
+						'swatchesSelector' => get_option( 'ov25_swatches_selector', '' ),
 						'priceSelector' => get_option( 'ov25_price_selector', '' ),
 						'customCSS' => get_option( 'ov25_custom_css', '' ),
+						'swatchProductId' => ov25_get_swatch_product_id(),
 					) );
 				}
 
@@ -416,6 +470,11 @@ function ov25_woo_extension_init() {
 						}
 					}
 				}
+        
+				// Add swatch data to order
+				if ( ! empty( $values['swatch_name'] ) ) {
+					$item->add_meta_data( $values['swatch_option'], $values['swatch_name'], true );
+				}
 			} catch ( Exception $e ) {
 				error_log( 'OV25 Woo Extension: Error in checkout create order line item (SKU) - ' . $e->getMessage() );
 			}
@@ -448,6 +507,15 @@ function ov25_woo_extension_init() {
 					}
 				}
 				
+				// Display swatch information as a single line: swatch_option: swatch_name
+				if ( ! empty( $cart_item['swatch_name'] ) || ! empty( $cart_item['swatch_option'] ) ) {
+					$item_data[] = array(
+						'key'     => esc_html( $cart_item['swatch_option'] ?? __( 'Swatch', 'ov25-woo-extension' ) ),
+						'value'   => esc_html( $cart_item['swatch_name'] ?? '' ),
+						'display' => '',
+					);
+				}
+				
 				return $item_data;
 			} catch ( Exception $e ) {
 				error_log( 'OV25 Woo Extension: Error in get item data - ' . $e->getMessage() );
@@ -471,6 +539,26 @@ function ov25_woo_extension_init() {
 					
 					return wc_price( $product_price );
 				}
+				
+				// Handle swatch pricing
+				if ( ! empty( $cart_item['swatch_price'] ) ) {
+					$swatch_price = floatval( $cart_item['swatch_price'] );
+					
+					if ( $swatch_price > 0 ) {
+						$args = array( 'price' => $swatch_price );
+						
+						if ( WC()->cart->display_prices_including_tax() ) {
+							$product_price = wc_get_price_including_tax( $cart_item['data'], $args );
+						} else {
+							$product_price = wc_get_price_excluding_tax( $cart_item['data'], $args );
+						}
+						
+						return wc_price( $product_price );
+					} else {
+						return __( 'Free', 'ov25-woo-extension' );
+					}
+				}
+				
 				return $price_html;
 			} catch ( Exception $e ) {
 				error_log( 'OV25 Woo Extension: Error in cart item price - ' . $e->getMessage() );
@@ -482,20 +570,32 @@ function ov25_woo_extension_init() {
 			try {
 				foreach ( $cart->get_cart() as $ci ) {
 		
-					if ( empty( $ci['cfg_price'] ) ) {
-						continue;                         // skip normal products
+					// Handle configurator products
+					if ( ! empty( $ci['cfg_price'] ) ) {
+						$price_major = $ci['cfg_price'] / 100;   // e.g. 120000 → 1200.00
+		
+						$product = $ci['data'];                 // WC_Product object
+		
+						/* 1. set the runtime price Woo uses for totals */
+						$product->set_price( $price_major );
+		
+						/* 2. align regular & sale prices so Woo doesn't think it's a discount */
+						$product->set_regular_price( $price_major );
+						$product->set_sale_price( '' );         // clear any sale flag
 					}
-		
-					$price_major = $ci['cfg_price'] / 100;   // e.g. 120000 → 1200.00
-		
-					$product = $ci['data'];                 // WC_Product object
-		
-					/* 1. set the runtime price Woo uses for totals */
-					$product->set_price( $price_major );
-		
-					/* 2. align regular & sale prices so Woo doesn't think it's a discount */
-					$product->set_regular_price( $price_major );
-					$product->set_sale_price( '' );         // clear any sale flag
+					
+					// Handle swatch products
+					if ( ! empty( $ci['swatch_price'] ) ) {
+						$swatch_price = floatval( $ci['swatch_price'] );
+						$product = $ci['data'];
+						
+						/* 1. set the runtime price Woo uses for totals */
+						$product->set_price( $swatch_price );
+						
+						/* 2. align regular & sale prices so Woo doesn't think it's a discount */
+						$product->set_regular_price( $swatch_price );
+						$product->set_sale_price( '' );         // clear any sale flag
+					}
 				}
 			} catch ( Exception $e ) {
 				error_log( 'OV25 Woo Extension: Error in before calculate totals - ' . $e->getMessage() );
@@ -509,12 +609,11 @@ function ov25_woo_extension_init() {
 				if ( empty( $item['ov25-thumbnail'] ) ) {
 					return $thumb;
 				}
-
-				$src = esc_url( $item['ov25-thumbnail'] );
-                $alt = '';
-                if ( isset( $item['data'] ) && is_object( $item['data'] ) && method_exists( $item['data'], 'get_name' ) ) {
-                    $alt = esc_attr( $item['data']->get_name() );
-                }
+        $src = esc_url( $item['ov25-thumbnail'] );
+        $alt = '';
+        if ( isset( $item['data'] ) && is_object( $item['data'] ) && method_exists( $item['data'], 'get_name' ) ) {
+            $alt = esc_attr( $item['data']->get_name() );
+        }
 
 				return "<img src='{$src}' alt='{$alt}' />";
 			} catch ( Exception $e ) {
@@ -627,6 +726,271 @@ function ov25_woo_extension_add_settings( $settings ) {
 		error_log( 'OV25 Woo Extension: Error adding settings - ' . $e->getMessage() );
 		return $settings;
 	}
+}
+
+/**
+ * Ensure swatch product exists for cart operations.
+ */
+function ov25_ensure_swatch_product_exists() {
+	// Check if swatch product already exists
+	$swatch_product_id = get_option( 'ov25_swatch_product_id' );
+	
+	if ( $swatch_product_id && wc_get_product( $swatch_product_id ) ) {
+		return $swatch_product_id;
+	}
+	
+	// Create swatch product if it doesn't exist
+	$product = new WC_Product_Simple();
+	$product->set_name( 'Swatch' );
+	$product->set_status( 'private' ); // Hidden from catalog
+	$product->set_catalog_visibility( 'hidden' );
+	$product->set_price( 0 );
+	$product->set_regular_price( 0 );
+    // Swatches need delivery, so product must not be virtual
+    $product->set_virtual( false );
+	$product->set_meta_data( '_ov25_swatch_product', 'yes' );
+	
+	$product_id = $product->save();
+	
+	if ( $product_id ) {
+		update_option( 'ov25_swatch_product_id', $product_id );
+		return $product_id;
+	}
+	
+	return false;
+}
+
+/** Get the swatch product ID. */
+function ov25_get_swatch_product_id() {
+    return get_option( 'ov25_swatch_product_id' );
+}
+
+/**
+ * Ensure a Swatches page exists at the configured slug containing the shortcode.
+ */
+function ov25_ensure_swatches_page_exists() {
+    try {
+        // Check if swatches page is enabled
+        $show_swatches_page = get_option( 'ov25_show_swatches_page', 'no' );
+        $page_slug = sanitize_title( get_option( 'ov25_swatches_page_slug', 'swatches' ) );
+        $page_title = sanitize_text_field( get_option( 'ov25_swatches_page_title', 'Swatches' ) );
+        $show_in_nav = get_option( 'ov25_swatches_show_in_nav', 'no' );
+        
+        $page_id = (int) get_option( 'ov25_swatches_page_id', 0 );
+        
+        if ( $show_swatches_page === 'yes' ) {
+            // Swatches page should be visible
+            $needs_create = true;
+            $needs_update = false;
+
+            if ( $page_id > 0 ) {
+                $page = get_post( $page_id );
+                if ( $page && $page->post_status !== 'trash' ) {
+                    // Check if the page slug, title, and visibility match the current settings
+                    $current_visibility = $show_in_nav === 'yes' ? 'publish' : 'private';
+                    if ( $page->post_name === $page_slug && $page->post_title === $page_title && $page->post_status === $current_visibility ) {
+                        $needs_create = false;
+                    } else {
+                        // Slug, title, or visibility changed, update the existing page
+                        $update_data = [ 'ID' => $page_id ];
+                        if ( $page->post_name !== $page_slug ) {
+                            $update_data['post_name'] = $page_slug;
+                        }
+                        if ( $page->post_title !== $page_title ) {
+                            $update_data['post_title'] = $page_title;
+                        }
+                        if ( $page->post_status !== $current_visibility ) {
+                            $update_data['post_status'] = $current_visibility;
+                        }
+                        wp_update_post( $update_data );
+                        $needs_create = false;
+                    }
+                }
+            }
+
+            if ( $needs_create ) {
+                // Check if a page with this slug already exists
+                $existing = get_page_by_path( $page_slug, OBJECT, 'page' );
+                if ( $existing && $existing->post_status !== 'trash' ) {
+                    update_option( 'ov25_swatches_page_id', $existing->ID );
+                    return;
+                }
+
+                $page_status = $show_in_nav === 'yes' ? 'publish' : 'private';
+                $page_id = wp_insert_post( [
+                    'post_title'   => $page_title,
+                    'post_name'    => $page_slug,
+                    'post_status'  => $page_status,
+                    'post_type'    => 'page',
+                    'post_content' => '[ov25_swatches]',
+                ] );
+
+                if ( $page_id && ! is_wp_error( $page_id ) ) {
+                    update_option( 'ov25_swatches_page_id', $page_id );
+                }
+            }
+        } else {
+            // Swatches page should be hidden - move to trash if it exists
+            if ( $page_id > 0 ) {
+                $page = get_post( $page_id );
+                if ( $page && $page->post_status !== 'trash' ) {
+                    wp_trash_post( $page_id );
+                }
+            }
+        }
+    } catch ( Exception $e ) {
+        error_log( 'OV25 Woo Extension: Error ensuring Swatches page - ' . $e->getMessage() );
+    }
+}
+
+/**
+ * If permalinks are set to Plain (/?page_id=), redirect the swatches page URL to the page's canonical link.
+ */
+function ov25_swatches_plain_permalink_redirect() {
+    if ( ! function_exists( 'get_option' ) ) return;
+    
+    // Check if swatches page is enabled
+    $show_swatches_page = get_option( 'ov25_show_swatches_page', 'no' );
+    if ( $show_swatches_page !== 'yes' ) return;
+    
+    $structure = get_option( 'permalink_structure' );
+    if ( ! empty( $structure ) ) return; // Pretty permalinks enabled
+
+    $page_slug = sanitize_title( get_option( 'ov25_swatches_page_slug', 'swatches' ) );
+    
+    // Only act on exact /{page_slug} (with or without trailing slash)
+    $req_uri = isset( $_SERVER['REQUEST_URI'] ) ? strtok( $_SERVER['REQUEST_URI'], '?' ) : '';
+    if ( ! in_array( rtrim( $req_uri, '/' ), [ '/' . $page_slug ], true ) ) return;
+
+    $page_id = (int) get_option( 'ov25_swatches_page_id', 0 );
+    if ( $page_id <= 0 ) return;
+    $link = get_permalink( $page_id );
+    if ( ! $link ) return;
+
+    // If permalink structure is plain, get_permalink will already be ?page_id=...
+    wp_safe_redirect( $link, 301 );
+    exit;
+}
+
+/**
+ * AJAX handler for creating swatch-only cart.
+ */
+function ov25_ajax_create_swatch_cart() {
+	try {
+		// Get swatch data from request
+		$swatch_data = isset( $_POST['swatch_data'] ) ? json_decode( wp_unslash( $_POST['swatch_data'] ), true ) : null;
+		
+		if ( ! $swatch_data ) {
+			wp_send_json_error( 'No swatch data provided' );
+			return;
+		}
+
+		// Store current cart contents to restore later
+		$current_cart = WC()->cart->get_cart();
+		WC()->session->set( 'ov25_original_cart', $current_cart );
+		
+		// Clear the main cart
+		WC()->cart->empty_cart();
+		
+        // Add swatches to the empty cart
+        $swatches = $swatch_data['swatches'];
+        $rules = $swatch_data['rules'];
+        // Resolve swatch product id on the server (create if missing)
+        $product_id = ov25_ensure_swatch_product_exists();
+		
+		foreach ( $swatches as $index => $swatch ) {
+			$is_free = $index < $rules['freeSwatchLimit'];
+			$swatch_price = $is_free ? 0 : $rules['pricePerSwatch'];
+			
+			$cart_item_data = array(
+				'swatch_manufacturer_id' => $swatch['manufacturerId'],
+				'swatch_name' => $swatch['name'],
+				'swatch_option' => $swatch['option'],
+				'swatch_total_count' => count( $swatches ),
+				'swatch_price' => $swatch_price,
+				'ov25-thumbnail' => $swatch['thumbnail']['miniThumbnails']['small'],
+			);
+			
+			WC()->cart->add_to_cart( $product_id, 1, 0, array(), $cart_item_data );
+		}
+		
+		// Mark this as a swatch-only cart
+		WC()->session->set( 'ov25_swatch_only_cart', true );
+		
+        // Return the correct checkout URL (respects permalinks/settings)
+        $checkout_url = function_exists( 'wc_get_checkout_url' ) ? wc_get_checkout_url() : home_url( '/checkout/' );
+        wp_send_json_success( array( 'message' => 'Swatch-only cart created successfully', 'checkout_url' => $checkout_url ) );
+		
+	} catch ( Exception $e ) {
+		error_log( 'OV25 Woo Extension: Error creating swatch-only cart - ' . $e->getMessage() );
+		wp_send_json_error( 'Failed to create swatch-only cart: ' . $e->getMessage() );
+	}
+}
+
+/**
+ * If the session indicates we’re in a swatch-only flow and the user visits any
+ * non-checkout/non-order-pay page, restore the original cart and clear flags.
+ */
+function ov25_maybe_restore_original_cart_on_navigation() {
+    // Only act if we had swapped carts
+    if ( ! WC()->session || ! WC()->session->get( 'ov25_swatch_only_cart' ) ) {
+        return;
+    }
+
+    // If we are on checkout or pay-for-order, do nothing
+    if ( function_exists( 'is_checkout' ) && is_checkout() ) {
+        return;
+    }
+    if ( isset( $_GET['pay_for_order'] ) || isset( $_GET['order-pay'] ) ) { // order pay endpoints
+        return;
+    }
+
+    // Restore (always clear current cart; re-add original items if any)
+    $original_cart = WC()->session->get( 'ov25_original_cart' );
+    WC()->cart->empty_cart();
+    if ( is_array( $original_cart ) ) {
+        foreach ( $original_cart as $item ) {
+            $product_id   = isset( $item['product_id'] ) ? (int) $item['product_id'] : 0;
+            $quantity     = isset( $item['quantity'] ) ? (int) $item['quantity'] : 1;
+            $variation_id = isset( $item['variation_id'] ) ? (int) $item['variation_id'] : 0;
+            $variation    = isset( $item['variation'] ) && is_array( $item['variation'] ) ? $item['variation'] : array();
+            $cart_item_data = ov25_extract_cart_item_custom_data( $item );
+            WC()->cart->add_to_cart( $product_id, $quantity, $variation_id, $variation, $cart_item_data );
+        }
+    }
+    WC()->session->set( 'ov25_swatch_only_cart', false );
+    WC()->session->set( 'ov25_original_cart', null );
+}
+
+/**
+ * Extract custom cart item data from a saved cart line for re-adding to cart.
+ * Copies OV25-specific keys and any non-reserved custom keys.
+ */
+function ov25_extract_cart_item_custom_data( $item ) {
+    if ( ! is_array( $item ) ) {
+        return array();
+    }
+
+    $reserved_keys = array(
+        'key', 'product_id', 'variation_id', 'variation', 'quantity', 'data', 'data_hash',
+        'line_total', 'line_tax', 'line_subtotal', 'line_subtotal_tax', 'line_tax_data'
+    );
+
+    $cart_item_data = array();
+
+    foreach ( $item as $key => $value ) {
+        // Always copy OV25/swatches and cfg_* fields
+        if ( strpos( $key, 'cfg_' ) === 0 || strpos( $key, 'swatch_' ) === 0 || strpos( $key, 'ov25-' ) === 0 ) {
+            $cart_item_data[ $key ] = $value;
+            continue;
+        }
+        // Copy any other non-reserved scalar/array custom fields
+        if ( ! in_array( $key, $reserved_keys, true ) ) {
+            $cart_item_data[ $key ] = $value;
+        }
+    }
+
+    return $cart_item_data;
 }
 
 
