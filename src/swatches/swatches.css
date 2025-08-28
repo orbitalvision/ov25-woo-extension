@@ -7,6 +7,12 @@
   padding: 0.5em;
 }
 
+@media (min-width: 768px) {
+  #ov25-swatches-app {
+    flex-direction: row;
+  }
+}
+
 /* ===== SWATCHES CONTAINER ===== */
 .swatches-container {
   width: 100%;

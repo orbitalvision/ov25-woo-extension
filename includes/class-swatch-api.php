@@ -52,7 +52,7 @@ if ( ! class_exists( 'OV25_Swatch_API' ) ) {
 				return new WP_Error( 'ov25_swatches_invalid_key', 'Invalid API key format', [ 'status' => 500 ] );
 			}
 			
-			$base_url = 'http://host.docker.internal:3000/api/public/swatches';
+			$base_url = 'https://webhooks.orbital.vision/api/public/swatches';
 			$url = add_query_arg( [ 'orgId' => $org_id, 'apiKey' => $sw_key ], $base_url );
 			
 			if ( $q ) {
@@ -97,7 +97,7 @@ if ( ! class_exists( 'OV25_Swatch_API' ) ) {
 				return new WP_Error( 'ov25_swatch_rules_invalid_key', 'Invalid API key format', [ 'status' => 500 ] );
 			}
 			
-			$base_url = 'http://host.docker.internal:3000/api/public/swatch-rules';
+			$base_url = 'http://webhooks.orbital.vision/api/public/swatch-rules';
 			$url = add_query_arg( [ 'orgId' => $org_id, 'apiKey' => $sw_key ], $base_url );
 			
 			$response = wp_remote_get( $url, [ 
