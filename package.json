@@ -48,7 +48,7 @@
 		"@wordpress/hooks": "^4.22.0",
 		"@wordpress/i18n": "^5.22.0",
 		"lucide-react": "^0.540.0",
-		"ov25-ui": "^0.5.4",
+		"ov25-ui": "^0.5.5",
 		"react": "^18.2.0",
 		"react-dom": "^18.2.0",
 		"sonner": "^2.0.7"
