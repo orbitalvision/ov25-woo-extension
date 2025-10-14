@@ -1,6 +1,6 @@
 {
 	"name": "ov25-woo-extension",
-	"version": "0.2.12",
+	"version": "0.2.13",
 	"author": "The WordPress Contributors",
 	"license": "GPL-3.0+",
 	"main": "build/index.js",
