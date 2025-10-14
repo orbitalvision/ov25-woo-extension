@@ -41,7 +41,8 @@
 		"release:patch": "npm run release -- patch",
 		"release:minor": "npm run release -- minor",
 		"release:major": "npm run release -- major",
-		"release": "node scripts/create-release.js"
+		"release": "node scripts/create-release.js",
+		"update-ui-pack": "node scripts/update-ui-pack.js"
 	},
 	"dependencies": {
 		"@woocommerce/components": "^10.3.0",

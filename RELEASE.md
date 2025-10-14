@@ -30,12 +30,19 @@ This plugin uses a **simplified release system** where you manually manage versi
 
 
 
+
+```bash
+To update the ui package run
+npm run update-ui-pack
+```
+
+
+
 ```bash
 # 1. Update versions manually in both places
 # - Update "Version: X.X.X" in ov25-woo-extension.php header
 # - Update "public $version = 'X.X.X';" in ov25-woo-extension.php class
-#If you want to update the UI package, run:
-npm install ov25-ui@latest --legacy-peer-deps
+
 npm i --legacy-peer-deps
 # 2. Build and zip with correct versions
 npm run build
@@ -48,6 +55,7 @@ git push -u origin main
 
 # 4. Release (only updates package.json for npm consistency)
 npm run release:patch   # or release:minor, release:major
+
 ```
 
 ## 📋 What Happens Automatically
