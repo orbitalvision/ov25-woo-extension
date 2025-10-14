@@ -370,21 +370,22 @@ function ov25_woo_extension_init() {
 						true
 					);
 
-					// Pass OV25 settings to frontend
-					wp_localize_script( 'ov25-frontend', 'ov25Settings', array(
-						'logoURL' => get_option( 'ov25_logo_url', '' ),
-						'mobileLogoURL' => get_option( 'ov25_mobile_logo_url', '' ),
-						'autoCarousel' => get_option( 'ov25_auto_carousel', 'no' ) === 'yes',
-						'deferThreeD' => get_option( 'ov25_defer_3d', 'yes' ) === 'yes',
-						'showOptional' => get_option( 'ov25_show_optional', 'no' ) === 'yes',
-						'images' => function_exists( 'wc_get_product' ) ? ov25_get_product_images() : array(),
-						'gallerySelector' => get_option( 'ov25_gallery_selector', '' ),
-						'variantsSelector' => get_option( 'ov25_variants_selector', '' ),
-						'swatchesSelector' => get_option( 'ov25_swatches_selector', '' ),
-						'priceSelector' => get_option( 'ov25_price_selector', '' ),
-						'customCSS' => get_option( 'ov25_custom_css', '' ),
-						'swatchProductId' => ov25_get_swatch_product_id(),
-					) );
+				// Pass OV25 settings to frontend
+				wp_localize_script( 'ov25-frontend', 'ov25Settings', array(
+					'logoURL' => get_option( 'ov25_logo_url', '' ),
+					'mobileLogoURL' => get_option( 'ov25_mobile_logo_url', '' ),
+					'autoCarousel' => get_option( 'ov25_auto_carousel', 'no' ) === 'yes',
+					'deferThreeD' => get_option( 'ov25_defer_3d', 'yes' ) === 'yes',
+					'showOptional' => get_option( 'ov25_show_optional', 'no' ) === 'yes',
+					'hideAr' => get_option( 'ov25_hide_ar', 'no' ) === 'yes',
+					'images' => function_exists( 'wc_get_product' ) ? ov25_get_product_images() : array(),
+					'gallerySelector' => get_option( 'ov25_gallery_selector', '' ),
+					'variantsSelector' => get_option( 'ov25_variants_selector', '' ),
+					'swatchesSelector' => get_option( 'ov25_swatches_selector', '' ),
+					'priceSelector' => get_option( 'ov25_price_selector', '' ),
+					'customCSS' => get_option( 'ov25_custom_css', '' ),
+					'swatchProductId' => ov25_get_swatch_product_id(),
+				) );
 				}
 
 				// Enqueue frontend CSS

@@ -9,6 +9,7 @@ declare global {
             autoCarousel: boolean;
             deferThreeD: boolean;
             showOptional: boolean;
+            hideAr: boolean;
             images: string[];
             gallerySelector: string;
             variantsSelector: string;
@@ -150,6 +151,7 @@ OV25.injectConfigurator({
     carouselId: window.ov25Settings?.autoCarousel ? true : false,
     deferThreeD: window.ov25Settings?.deferThreeD || false,
     showOptional: window.ov25Settings?.showOptional || false,
+    hideAr: window.ov25Settings?.hideAr || false,
     cssString: window.ov25Settings?.customCSS || '',
 });
 
