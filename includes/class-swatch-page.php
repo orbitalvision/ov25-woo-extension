@@ -49,7 +49,9 @@ if ( ! class_exists( 'OV25_Swatch_Page' ) ) {
 
 				// Data for frontend page
 				wp_localize_script( 'ov25-swatches', 'ov25SwatchesPage', [
-					'restBase' => esc_url_raw( get_rest_url( null, 'ov25/v1/swatches' ) ),
+					'restBase' => esc_url_raw( get_rest_url() ), // Base REST URL (handles both pretty and plain permalinks)
+					'swatchesUrl' => esc_url_raw( get_rest_url( null, 'ov25/v1/swatches' ) ), // Full URL to swatches endpoint
+					'swatchRulesUrl' => esc_url_raw( get_rest_url( null, 'ov25/v1/swatch-rules' ) ), // Full URL to swatch-rules endpoint
 					'nonce'    => wp_create_nonce( 'wp_rest' ),
 				] );
 			}

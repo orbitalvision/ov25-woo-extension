@@ -92,15 +92,22 @@ const ImageDialog: React.FC<{
 
 declare global {
   interface Window {
-    ov25SwatchesPage?: { restBase: string; nonce: string };
+    ov25SwatchesPage?: { 
+      restBase: string; 
+      swatchesUrl: string;
+      swatchRulesUrl: string;
+      nonce: string;
+    };
   }
 }
 
 async function fetchSwatches(): Promise<Swatch[]> {
   try {
-    const swatchesUrl = new URL('/wp-json/ov25/v1/swatches', window.location.origin);
+    // Use full URL from PHP which handles both pretty and plain permalinks
+    const swatchesUrl = window.ov25SwatchesPage?.swatchesUrl || 
+      `${window.ov25SwatchesPage?.restBase || '/wp-json'}/ov25/v1/swatches`;
     
-    const response = await fetch(swatchesUrl.toString(), {
+    const response = await fetch(swatchesUrl, {
       headers: { 'Accept': 'application/json' }
     });
 
@@ -118,9 +125,11 @@ async function fetchSwatches(): Promise<Swatch[]> {
 
 async function getSwatchRules(): Promise<SwatchRulesData | null> {
   try {
-    const rulesUrl = new URL('/wp-json/ov25/v1/swatch-rules', window.location.origin);
+    // Use full URL from PHP which handles both pretty and plain permalinks
+    const rulesUrl = window.ov25SwatchesPage?.swatchRulesUrl || 
+      `${window.ov25SwatchesPage?.restBase || '/wp-json'}/ov25/v1/swatch-rules`;
     
-    const response = await fetch(rulesUrl.toString(), {
+    const response = await fetch(rulesUrl, {
       headers: { 'Accept': 'application/json' }
     });
 
