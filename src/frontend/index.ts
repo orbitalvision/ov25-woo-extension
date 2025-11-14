@@ -1,4 +1,4 @@
-import * as OV25 from 'ov25-ui';
+import * as OV25 from 'ov25-ui-react18';
 
 // Declare global variables for TypeScript
 declare global {

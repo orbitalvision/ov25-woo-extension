@@ -43,7 +43,7 @@ function updateVersions() {
 
 function runCommands() {
     const commands = [
-        'npm install ov25-ui@latest --legacy-peer-deps',
+        'npm install ov25-ui-react18@latest --legacy-peer-deps',
         'npm i --legacy-peer-deps',
         'npm run build',
         'npm run zip',

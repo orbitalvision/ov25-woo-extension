@@ -1,4 +1,4 @@
-declare module 'ov25-ui' {
+declare module 'ov25-ui-react18' {
   export function injectConfigurator(config: {
     apiKey: string | (() => string);
     productLink: string | (() => string);
@@ -9,4 +9,4 @@ declare module 'ov25-ui' {
   }): void;
 }
 
-declare module 'ov25-ui/styles.css'; 
+declare module 'ov25-ui-react18/styles.css'; 
