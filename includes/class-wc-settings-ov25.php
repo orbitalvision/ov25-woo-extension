@@ -200,6 +200,14 @@ class WC_Settings_Ov25 extends WC_Settings_Page {
 				'default'  => 'yes',
 			),
 			array(
+				'title'    => __( 'Test Mode', 'ov25-woo-extension' ),
+				'desc'     => __( 'Enable test mode to keep the swatches page in draft status. The plugin will not automatically publish or update the page status when this is enabled.', 'ov25-woo-extension' ),
+				'id'       => 'ov25_swatches_test_mode',
+				'type'     => 'checkbox',
+				'desc_tip' => true,
+				'default'  => 'no',
+			),
+			array(
 				'type' => 'sectionend',
 				'id'   => 'ov25_swatch_page_settings',
 			),

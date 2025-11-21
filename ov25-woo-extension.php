@@ -787,6 +787,7 @@ function ov25_ensure_swatches_page_exists() {
         $page_slug = sanitize_title( get_option( 'ov25_swatches_page_slug', 'swatches' ) );
         $page_title = sanitize_text_field( get_option( 'ov25_swatches_page_title', 'Swatches' ) );
         $show_in_nav = get_option( 'ov25_swatches_show_in_nav', 'no' );
+        $test_mode = get_option( 'ov25_swatches_test_mode', 'no' );
         
         $page_id = (int) get_option( 'ov25_swatches_page_id', 0 );
         
@@ -800,22 +801,43 @@ function ov25_ensure_swatches_page_exists() {
                 if ( $page && $page->post_status !== 'trash' ) {
                     // Check if the page slug, title, and visibility match the current settings
                     $current_visibility = $show_in_nav === 'yes' ? 'publish' : 'private';
-                    if ( $page->post_name === $page_slug && $page->post_title === $page_title && $page->post_status === $current_visibility ) {
-                        $needs_create = false;
+                    
+                    // In test mode, don't check or update the page status
+                    if ( $test_mode === 'yes' ) {
+                        // Only check slug and title, ignore status
+                        if ( $page->post_name === $page_slug && $page->post_title === $page_title ) {
+                            $needs_create = false;
+                        } else {
+                            // Slug or title changed, update the existing page (but not status)
+                            $update_data = [ 'ID' => $page_id ];
+                            if ( $page->post_name !== $page_slug ) {
+                                $update_data['post_name'] = $page_slug;
+                            }
+                            if ( $page->post_title !== $page_title ) {
+                                $update_data['post_title'] = $page_title;
+                            }
+                            wp_update_post( $update_data );
+                            $needs_create = false;
+                        }
                     } else {
-                        // Slug, title, or visibility changed, update the existing page
-                        $update_data = [ 'ID' => $page_id ];
-                        if ( $page->post_name !== $page_slug ) {
-                            $update_data['post_name'] = $page_slug;
+                        // Normal mode: check slug, title, and status
+                        if ( $page->post_name === $page_slug && $page->post_title === $page_title && $page->post_status === $current_visibility ) {
+                            $needs_create = false;
+                        } else {
+                            // Slug, title, or visibility changed, update the existing page
+                            $update_data = [ 'ID' => $page_id ];
+                            if ( $page->post_name !== $page_slug ) {
+                                $update_data['post_name'] = $page_slug;
+                            }
+                            if ( $page->post_title !== $page_title ) {
+                                $update_data['post_title'] = $page_title;
+                            }
+                            if ( $page->post_status !== $current_visibility ) {
+                                $update_data['post_status'] = $current_visibility;
+                            }
+                            wp_update_post( $update_data );
+                            $needs_create = false;
                         }
-                        if ( $page->post_title !== $page_title ) {
-                            $update_data['post_title'] = $page_title;
-                        }
-                        if ( $page->post_status !== $current_visibility ) {
-                            $update_data['post_status'] = $current_visibility;
-                        }
-                        wp_update_post( $update_data );
-                        $needs_create = false;
                     }
                 }
             }
@@ -828,7 +850,8 @@ function ov25_ensure_swatches_page_exists() {
                     return;
                 }
 
-                $page_status = $show_in_nav === 'yes' ? 'publish' : 'private';
+                // In test mode, create page as draft; otherwise use normal status
+                $page_status = $test_mode === 'yes' ? 'draft' : ( $show_in_nav === 'yes' ? 'publish' : 'private' );
                 $page_id = wp_insert_post( [
                     'post_title'   => $page_title,
                     'post_name'    => $page_slug,
