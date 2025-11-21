@@ -476,6 +476,9 @@ function ov25_woo_extension_init() {
 				if ( ! empty( $values['swatch_name'] ) ) {
 					$item->add_meta_data( $values['swatch_option'], $values['swatch_name'], true );
 				}
+				if ( ! empty( $values['swatch_sku'] ) ) {
+					$item->add_meta_data( 'SKU', $values['swatch_sku'], true );
+				}
 			} catch ( Exception $e ) {
 				error_log( 'OV25 Woo Extension: Error in checkout create order line item (SKU) - ' . $e->getMessage() );
 			}
@@ -513,6 +516,14 @@ function ov25_woo_extension_init() {
 					$item_data[] = array(
 						'key'     => esc_html( $cart_item['swatch_option'] ?? __( 'Swatch', 'ov25-woo-extension' ) ),
 						'value'   => esc_html( $cart_item['swatch_name'] ?? '' ),
+						'display' => '',
+					);
+				}
+
+				if ( ! empty( $cart_item['swatch_sku'] ) ) {
+					$item_data[] = array(
+						'key'     => esc_html( __( 'SKU', 'ov25-woo-extension' ) ),
+						'value'   => esc_html( $cart_item['swatch_sku'] ),
 						'display' => '',
 					);
 				}
@@ -909,6 +920,7 @@ function ov25_ajax_create_swatch_cart() {
 				'swatch_option' => $swatch['option'],
 				'swatch_total_count' => count( $swatches ),
 				'swatch_price' => $swatch_price,
+				'swatch_sku' => $swatch['sku'],
 				'ov25-thumbnail' => $swatch['thumbnail']['miniThumbnails']['small'],
 			);
 			

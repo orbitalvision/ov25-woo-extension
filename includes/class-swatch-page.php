@@ -53,6 +53,7 @@ if ( ! class_exists( 'OV25_Swatch_Page' ) ) {
 					'swatchesUrl' => esc_url_raw( get_rest_url( null, 'ov25/v1/swatches' ) ), // Full URL to swatches endpoint
 					'swatchRulesUrl' => esc_url_raw( get_rest_url( null, 'ov25/v1/swatch-rules' ) ), // Full URL to swatch-rules endpoint
 					'nonce'    => wp_create_nonce( 'wp_rest' ),
+					'customCSS' => get_option( 'ov25_custom_css', '' ), // Custom CSS from WooCommerce admin
 				] );
 			}
 
