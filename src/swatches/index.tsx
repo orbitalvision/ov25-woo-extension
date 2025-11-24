@@ -47,14 +47,24 @@ const ImageDialog: React.FC<{
     }
   }, [isOpen]);
 
+  // Handle ESC key to close dialog
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, onClose]);
+
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
       onClose();
     }
   };
@@ -65,8 +75,6 @@ const ImageDialog: React.FC<{
     <div 
       className="ov25-image-dialog-overlay"
       onClick={handleBackdropClick}
-      onKeyDown={handleKeyDown}
-      tabIndex={-1}
     >
       <div className="ov25-image-dialog">
         <button
@@ -180,6 +188,99 @@ async function createSwatchOnlyCart(swatches: Swatch[], rules: SwatchRulesData):
   }
 }
 
+const ReplaceDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  cartSwatches: Swatch[];
+  newSwatch: Swatch;
+  onReplace: (oldSwatch: Swatch) => void;
+}> = ({ isOpen, onClose, cartSwatches, newSwatch, onReplace }) => {
+  // Prevent body scrolling when dialog is open
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isOpen]);
+
+  // Handle ESC key to close dialog
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div 
+      className="ov25-image-dialog-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="ov25-replace-dialog">
+        <button
+          className="ov25-replace-dialog-close"
+          onClick={onClose}
+          aria-label="Close dialog"
+        >
+          <X size={24} />
+        </button>
+        <h2 className="ov25-replace-dialog-title">Your cart is full</h2>
+        <p className="ov25-replace-dialog-subtitle">
+          Select a swatch to replace with <strong>{newSwatch.name}</strong>
+        </p>
+        <div className="ov25-replace-dialog-list">
+          {cartSwatches.map((cartSwatch) => {
+            const imgSrc = cartSwatch.thumbnail?.miniThumbnails?.medium;
+            return (
+              <div
+                key={cartSwatch.id}
+                className="ov25-replace-dialog-item"
+                onClick={() => {
+                  onReplace(cartSwatch);
+                  onClose();
+                }}
+              >
+                <div className="ov25-replace-dialog-thumb-container">
+                  {imgSrc ? (
+                    <img 
+                      src={imgSrc} 
+                      alt={cartSwatch.name}
+                      className="ov25-replace-dialog-thumb"
+                    />
+                  ) : (
+                    <div className="ov25-replace-dialog-thumb ov25-replace-dialog-thumb--placeholder">
+                      No img
+                    </div>
+                  )}
+                  <div className="ov25-cart-thumb-gradient ov25-swatch-gradient-radial"></div>
+                  <div className="ov25-cart-thumb-gradient ov25-swatch-gradient-shadow"></div>
+                </div>
+                <div className="ov25-replace-dialog-item-name">{cartSwatch.name}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SwatchCard: React.FC<{ 
   swatch: Swatch; 
   isInCart: boolean; 
@@ -190,8 +291,9 @@ const SwatchCard: React.FC<{
   const imgSrc = swatch.thumbnail?.miniThumbnails?.medium;
   const fullSizeImgSrc = swatch.thumbnail?.thumbnail;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isReplaceDialogOpen, setIsReplaceDialogOpen] = useState(false);
 
-  const handleAddClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleAddClick = (e: React.MouseEvent<HTMLElement>) => {
     e.stopPropagation();
     
     if (swatchRules) {
@@ -201,8 +303,7 @@ const SwatchCard: React.FC<{
         : Math.min(swatchRules.freeSwatchLimit, swatchRules.maxSwatches);
       
       if (currentCount >= maxAllowed) {
-        const maxSwatches = swatchRules.canExeedFreeLimit ? swatchRules.maxSwatches : swatchRules.freeSwatchLimit;
-        toast.error(`Cart is full! You can only have ${maxSwatches} samples.`);
+        setIsReplaceDialogOpen(true);
         return;
       }
     }
@@ -213,7 +314,20 @@ const SwatchCard: React.FC<{
     toast.success(`${swatch.name} added to cart`);
   };
 
-  const handleRemoveClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleReplace = (oldSwatch: Swatch) => {
+    const updatedSwatches = selectedSwatches.map(s => 
+      s.manufacturerId === oldSwatch.manufacturerId && 
+      s.option === oldSwatch.option && 
+      s.name === oldSwatch.name
+        ? swatch
+        : s
+    );
+    setSelectedSwatches(updatedSwatches);
+    localStorage.setItem('ov25-selected-swatches', JSON.stringify(updatedSwatches));
+    toast.success(`${oldSwatch.name} replaced with ${swatch.name}`);
+  };
+
+  const handleRemoveClick = (e: React.MouseEvent<HTMLElement>) => {
     e.stopPropagation();
     
     const updatedSwatches = selectedSwatches.filter(s => 
@@ -230,44 +344,53 @@ const SwatchCard: React.FC<{
       <div className="ov25-swatch-card">
         <div className="ov25-swatch-image-container">
           {imgSrc ? (
-            <img src={imgSrc} alt={swatch.name} className="ov25-swatch-image" />
-          ) : (
-            <div className="ov25-swatch-image-placeholder">No image</div>
-          )}
-          {fullSizeImgSrc && (
-            <button
-              type="button"
-              className="ov25-swatch-zoom-overlay"
+            <img 
+              src={imgSrc} 
+              alt={swatch.name} 
+              className="ov25-swatch-image"
               onClick={(e) => {
-                e.stopPropagation();
-                setIsDialogOpen(true);
+                if (isInCart) {
+                  e.stopPropagation();
+                  handleRemoveClick(e);
+                } else {
+                  e.stopPropagation();
+                  handleAddClick(e);
+                }
               }}
-              aria-label={`View full size image of ${swatch.name}`}
+            />
+          ) : (
+            <div 
+              className="ov25-swatch-image-placeholder"
+              onClick={(e) => {
+                if (isInCart) {
+                  e.stopPropagation();
+                  handleRemoveClick(e);
+                } else {
+                  e.stopPropagation();
+                  handleAddClick(e);
+                }
+              }}
             >
-              <ZoomIn size={24} />
-            </button>
+              No image
+            </div>
           )}
+          <div 
+            className={`ov25-swatch-card-border ${isInCart ? 'ov25-swatch-card-border--selected' : ''}`}
+          ></div>
+          <div className="ov25-swatch-card-gradient ov25-swatch-gradient-radial"></div>
+          <div className="ov25-swatch-card-gradient ov25-swatch-gradient-shadow"></div>
         </div>
         <div className="ov25-swatch-content">
           <div className="ov25-swatch-header">
             <div className="ov25-swatch-name">{swatch.name}</div>
-            {isInCart ? (
+            {fullSizeImgSrc && (
               <button
                 type="button"
-                className="ov25-swatch-remove-btn"
-                aria-label={`Remove ${swatch.name}`}
-                onClick={handleRemoveClick}
+                className="ov25-swatch-zoom-btn"
+                aria-label={`View full size image of ${swatch.name}`}
+                onClick={() => setIsDialogOpen(true)}
               >
-                <Minus size={18} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="ov25-swatch-add-btn"
-                aria-label={`Add ${swatch.name}`}
-                onClick={handleAddClick}
-              >
-                <Plus size={18} />
+                <ZoomIn size={20} />
               </button>
             )}
           </div>
@@ -282,6 +405,14 @@ const SwatchCard: React.FC<{
         imageAlt={swatch.name}
         description={swatch.description || undefined}
       />
+      
+      <ReplaceDialog
+        isOpen={isReplaceDialogOpen}
+        onClose={() => setIsReplaceDialogOpen(false)}
+        cartSwatches={selectedSwatches}
+        newSwatch={swatch}
+        onReplace={handleReplace}
+      />
     </>
   );
 };
@@ -293,6 +424,7 @@ const CartPanel: React.FC<{
   rulesLoading: boolean; 
 }> = ({ selectedSwatches, setSelectedSwatches, swatchRules, rulesLoading }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [dialogSwatch, setDialogSwatch] = useState<Swatch | null>(null);
 
   const handleBuyNow = async () => {
     if (selectedSwatches.length === 0) {
@@ -337,25 +469,29 @@ const CartPanel: React.FC<{
       <h2 className="ov25-cart-title">Cart ({selectedSwatches.length}/{maxAllowed})</h2>
       
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        {selectedSwatches.length === 0 ? (
-          <p className="ov25-cart-empty">No swatches selected</p>
-        ) : (
-          <div className="ov25-cart-list">
-            {selectedSwatches.map((swatch) => {
-              const imgSrc = swatch.thumbnail?.miniThumbnails?.small;
+        <div className="ov25-cart-list">
+          {Array.from({ length: maxAllowed }, (_, index) => {
+            const swatch = selectedSwatches[index];
+            if (swatch) {
+              const imgSrc = swatch.thumbnail?.miniThumbnails?.medium;
+              const fullSizeImgSrc = swatch.thumbnail?.thumbnail;
               return (
                 <div key={swatch.id} className="ov25-cart-item">
-                  {imgSrc ? (
-                    <img 
-                      src={imgSrc} 
-                      alt={swatch.name}
-                      className="ov25-cart-thumb"
-                    />
-                  ) : (
-                    <div className="ov25-cart-thumb ov25-cart-thumb--placeholder">
-                      No img
-                    </div>
-                  )}
+                  <div className="ov25-cart-thumb-container">
+                    {imgSrc ? (
+                      <img 
+                        src={imgSrc} 
+                        alt={swatch.name}
+                        className="ov25-cart-thumb"
+                      />
+                    ) : (
+                      <div className="ov25-cart-thumb ov25-cart-thumb--placeholder">
+                        No img
+                      </div>
+                    )}
+                    <div className="ov25-cart-thumb-gradient ov25-swatch-gradient-radial"></div>
+                    <div className="ov25-cart-thumb-gradient ov25-swatch-gradient-shadow"></div>
+                  </div>
                   <div className="ov25-cart-item-body">
                     <div className="ov25-cart-item-name">{swatch.name}</div>
                     {swatch.option && <div className="ov25-cart-item-option">{swatch.option}</div>}
@@ -364,55 +500,91 @@ const CartPanel: React.FC<{
                     onClick={() => handleRemoveSwatch(swatch)}
                     className="ov25-cart-remove"
                   >
-                    <Trash size={18} />
+                    <X size={32} />
                   </button>
                 </div>
               );
-            })}
+            } else {
+              return (
+                <div key={`empty-${index}`} className="ov25-cart-item-empty">
+                  <div className="ov25-cart-empty-slot"></div>
+                </div>
+              );
+            }
+          })}
+        </div>
+      </div>
+      <div className="ov25-cart-footer">
+        {swatchRules && (
+          <div className="ov25-cart-info">
+            <div className="ov25-cart-limits">
+              <span>First {swatchRules.freeSwatchLimit} samples are free</span>
+            </div>
+            <div className="ov25-cart-price">
+              {(() => {
+                const totalSwatches = selectedSwatches.length;
+                const freeSwatches = Math.min(swatchRules.freeSwatchLimit, totalSwatches);
+                const paidSwatches = Math.max(0, totalSwatches - freeSwatches);
+                const maxSwatches = swatchRules.maxSwatches;
+                const maxFreeSwatches = Math.min(swatchRules.freeSwatchLimit, maxSwatches);
+                const minSwatches = swatchRules.minSwatches;
+                const totalPrice = paidSwatches * swatchRules.pricePerSwatch;
+                if (selectedSwatches.length < minSwatches && minSwatches > 1) {
+                  return <span className="ov25-cart-limits">Minimum of {minSwatches} samples required</span>;
+                }
+                if (paidSwatches === 0 && maxFreeSwatches < maxSwatches) {
+                  return <span className="ov25-price-free">Free</span>;
+                } else if (totalPrice > 0) {
+                  return (
+                    <span className="ov25-price-total">
+                      {paidSwatches > 0 && (
+                        <span className="ov25-price-breakdown">
+                          ({paidSwatches} × £{swatchRules.pricePerSwatch.toFixed(2)})
+                        </span>
+                      )}
+                      Total: £{totalPrice.toFixed(2)}
+                    </span>
+                  );
+                }
+              })()}
+            </div>
           </div>
         )}
+        <button
+          onClick={handleBuyNow}
+          className="ov25-cart-buy-btn"
+          disabled={(selectedSwatches.length < (swatchRules?.minSwatches || 0)) || isProcessing || rulesLoading}
+        >
+          {isProcessing ? 'Processing...' : rulesLoading ? 'Loading...' : 'Order Samples'}
+        </button>
       </div>
-
-      {selectedSwatches.length > 0 && (
-        <div className="ov25-cart-footer">
-          {swatchRules && (
-            <div className="ov25-cart-info">
-              <div className="ov25-cart-limits">
-                <span>First {swatchRules.freeSwatchLimit} samples are free</span>
-              </div>
-              <div className="ov25-cart-price">
-                {(() => {
-                  const totalSwatches = selectedSwatches.length;
-                  const freeSwatches = Math.min(swatchRules.freeSwatchLimit, totalSwatches);
-                  const paidSwatches = Math.max(0, totalSwatches - freeSwatches);
-                  const totalPrice = paidSwatches * swatchRules.pricePerSwatch;
-                  
-                  if (paidSwatches === 0) {
-                    return <span className="ov25-price-free">Free</span>;
-                  } else {
-                    return (
-                      <span className="ov25-price-total">
-                        {paidSwatches > 0 && (
-                          <span className="ov25-price-breakdown">
-                            ({paidSwatches} × £{swatchRules.pricePerSwatch.toFixed(2)})
-                          </span>
-                        )}
-                        Total: £{totalPrice.toFixed(2)}
-                      </span>
-                    );
-                  }
-                })()}
-              </div>
-            </div>
-          )}
-          <button
-            onClick={handleBuyNow}
-            className="ov25-cart-buy-btn"
-            disabled={isProcessing || rulesLoading}
-          >
-            {isProcessing ? 'Processing...' : rulesLoading ? 'Loading...' : 'Order Samples'}
-          </button>
-        </div>
+      
+      {/* Fixed button for mobile */}
+      <button
+        onClick={handleBuyNow}
+        className="ov25-cart-buy-btn-fixed"
+        disabled={(selectedSwatches.length < (swatchRules?.minSwatches || 0)) || isProcessing || rulesLoading}
+      >
+        {isProcessing ? 'Processing...' : rulesLoading ? 'Loading...' : (
+          <>
+            Order Samples
+            {swatchRules && (
+              <span className="ov25-cart-buy-btn-count">
+                {' '}({selectedSwatches.length}/{swatchRules.maxSwatches})
+              </span>
+            )}
+          </>
+        )}
+      </button>
+      
+      {dialogSwatch && (
+        <ImageDialog
+          isOpen={!!dialogSwatch}
+          onClose={() => setDialogSwatch(null)}
+          imageSrc={dialogSwatch.thumbnail?.thumbnail || ''}
+          imageAlt={dialogSwatch.name}
+          description={dialogSwatch.description || undefined}
+        />
       )}
     </div>
   );
@@ -422,7 +594,8 @@ const SwatchesApp: React.FC<{
   selectedSwatches: Swatch[]; 
   setSelectedSwatches: React.Dispatch<React.SetStateAction<Swatch[]>>;
   swatchRules: SwatchRulesData | null;
-}> = ({ selectedSwatches, setSelectedSwatches, swatchRules }) => {
+  rulesLoading: boolean;
+}> = ({ selectedSwatches, setSelectedSwatches, swatchRules, rulesLoading }) => {
   const [allSwatches, setAllSwatches] = useState<Swatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -497,6 +670,7 @@ const SwatchesApp: React.FC<{
 
   return (
     <div className="ov25-swatches-container">
+      <h2 className="ov25-swatches-title">Browse Swatches</h2>
       <div className="ov25-swatches-header">
         <div className="ov25-search-container">
           <Search size={20} className="ov25-search-icon" />
@@ -511,15 +685,19 @@ const SwatchesApp: React.FC<{
       </div>
 
       {error && <div className="ov25-swatches-error">{error}</div>}
-      {loading && <div className="ov25-swatches-loading" aria-live="polite">Loading swatches...</div>}
+      {(loading || rulesLoading) && (
+        <div className="ov25-swatches-loading" aria-live="polite">
+          Loading Swatches...
+        </div>
+      )}
       
-      {(!swatchRules?.enabled || (!loading && filteredSwatches.length === 0)) && (
+      {!rulesLoading && (!swatchRules?.enabled || (!loading && filteredSwatches.length === 0)) && (
         <div className="ov25-swatches-empty">{swatchRules?.enabled ? 'No swatches found' : 'Swatch purchasing is currently disabled'}</div>
       )}
 
       {!loading && swatchRules?.enabled && filteredSwatches.length > 0 && (
         <div className="ov25-swatches-groups">
-          {sortedGroups.map((option) => {
+            {sortedGroups.map((option) => {
             const isCollapsed = collapsedGroups.has(option);
             const swatchCount = groupedSwatches[option].length;
             
@@ -625,6 +803,7 @@ const App: React.FC = () => {
           selectedSwatches={selectedSwatches} 
           setSelectedSwatches={setSelectedSwatches} 
           swatchRules={swatchRules}
+          rulesLoading={rulesLoading}
         />
       <CartPanel 
         selectedSwatches={selectedSwatches} 
