@@ -841,11 +841,11 @@ const SwatchesApp: React.FC<{
     }, 150);
   };
 
-  // Extract unique groups from all swatches, excluding empty strings
+  // Extract unique groups from all swatches, excluding empty strings and "Default Group"
   const allGroups = useMemo(() => {
     const groups = new Set<string>();
     allSwatches.forEach((swatch) => {
-      if (swatch.group && swatch.group.trim() !== '') {
+      if (swatch.group && swatch.group.trim() !== '' && swatch.group !== 'Default Group') {
         groups.add(swatch.group);
       }
     });
