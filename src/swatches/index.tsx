@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ZoomIn, X, ChevronDown, ChevronRight, Search, ListFilter } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
+import { stringSimilarity } from 'string-similarity-js';
 import './swatches.css';
 
 type Swatch = {
@@ -418,90 +419,36 @@ const SwatchCard: React.FC<{
   );
 };
 
-const CartPanel: React.FC<{ 
-  selectedSwatches: Swatch[]; 
-  setSelectedSwatches: React.Dispatch<React.SetStateAction<Swatch[]>>; 
-  swatchRules: SwatchRulesData | null; 
-  rulesLoading: boolean; 
-}> = ({ selectedSwatches, setSelectedSwatches, swatchRules, rulesLoading }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [dialogSwatch, setDialogSwatch] = useState<Swatch | null>(null);
-  const [isNormalButtonVisible, setIsNormalButtonVisible] = useState(true);
-  const normalButtonRef = useRef<HTMLButtonElement>(null);
-
-  const handleBuyNow = async () => {
-    if (selectedSwatches.length === 0) {
-      toast.error('No swatches selected');
-      return;
-    }
-
-    if (!swatchRules) {
-      toast.error('Swatch rules not loaded. Please refresh the page.');
-      return;
-    }
-
-    if (!swatchRules.enabled) {
-      toast.error('Swatch purchasing is currently disabled');
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      const checkoutUrl = await createSwatchOnlyCart(selectedSwatches, swatchRules);
-      const redirectUrl = checkoutUrl || (window as any).ov25CheckoutUrl || window.location.origin + '/checkout/';
-      window.location.href = redirectUrl;
-    } catch (error) {
-      console.error('Failed to process swatch purchase:', error);
-      toast.error('Failed to process purchase. Please try again.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
+// Reusable cart content component
+const CartContent: React.FC<{
+  selectedSwatches: Swatch[];
+  setSelectedSwatches: React.Dispatch<React.SetStateAction<Swatch[]>>;
+  swatchRules: SwatchRulesData | null;
+  rulesLoading: boolean;
+  onBuyNow: () => void;
+  isProcessing: boolean;
+  buttonRef?: React.RefObject<HTMLButtonElement | null>;
+}> = ({ selectedSwatches, setSelectedSwatches, swatchRules, rulesLoading, onBuyNow, isProcessing, buttonRef }) => {
   const handleRemoveSwatch = (swatch: Swatch) => {
     const updatedSwatches = selectedSwatches.filter(s => s.manufacturerId !== swatch.manufacturerId || s.option !== swatch.option || s.name !== swatch.name);
     setSelectedSwatches(updatedSwatches);
     localStorage.setItem('ov25-selected-swatches', JSON.stringify(updatedSwatches));
   };
 
-  // Use IntersectionObserver to track when normal button is visible
-  useEffect(() => {
-    const button = normalButtonRef.current;
-    if (!button) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          setIsNormalButtonVisible(entry.isIntersecting);
-        });
-      },
-      {
-        threshold: 0.1, // Trigger when 10% of button is visible
-        rootMargin: '0px',
-      }
-    );
-
-    observer.observe(button);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
   const maxAllowed = swatchRules?.canExeedFreeLimit
     ? swatchRules.maxSwatches
     : Math.min(swatchRules?.freeSwatchLimit || 0, swatchRules?.maxSwatches || 0);
+
   return (
-    <div className="ov25-swatches-cart">
+    <>
       <h2 className="ov25-cart-title">Cart ({selectedSwatches.length}/{maxAllowed})</h2>
       
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div className="ov25-cart-list-wrapper">
         <div className="ov25-cart-list">
           {Array.from({ length: maxAllowed }, (_, index) => {
             const swatch = selectedSwatches[index];
             if (swatch) {
               const imgSrc = swatch.thumbnail?.miniThumbnails?.medium;
-              const fullSizeImgSrc = swatch.thumbnail?.thumbnail;
               return (
                 <div key={swatch.id} className="ov25-cart-item">
                   <div className="ov25-cart-thumb-container">
@@ -578,24 +525,178 @@ const CartPanel: React.FC<{
           </div>
         )}
         <button
-          ref={normalButtonRef}
-          onClick={handleBuyNow}
+          ref={buttonRef}
+          onClick={onBuyNow}
           className="ov25-cart-buy-btn"
           disabled={(selectedSwatches.length < (swatchRules?.minSwatches || 0)) || isProcessing || rulesLoading}
         >
           {isProcessing ? 'Processing...' : rulesLoading ? 'Loading...' : 'Order Samples'}
         </button>
       </div>
+    </>
+  );
+};
+
+// Cart Dialog component
+const CartDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  selectedSwatches: Swatch[];
+  setSelectedSwatches: React.Dispatch<React.SetStateAction<Swatch[]>>;
+  swatchRules: SwatchRulesData | null;
+  rulesLoading: boolean;
+  onBuyNow: () => void;
+  isProcessing: boolean;
+}> = ({ isOpen, onClose, selectedSwatches, setSelectedSwatches, swatchRules, rulesLoading, onBuyNow, isProcessing }) => {
+  // Prevent body scrolling when dialog is open (mobile only)
+  React.useEffect(() => {
+    if (isOpen) {
+      const isMobile = window.matchMedia('(max-width: 767px)').matches;
+      if (isMobile) {
+        document.body.style.overflow = 'hidden';
+        return () => {
+          document.body.style.overflow = '';
+        };
+      }
+    }
+  }, [isOpen]);
+
+  // Handle ESC key to close dialog
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div 
+      className="ov25-image-dialog-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="ov25-cart-dialog">
+        <button
+          className="ov25-image-dialog-close"
+          onClick={onClose}
+          aria-label="Close cart"
+        >
+          <X size={24} />
+        </button>
+        <div className="ov25-swatches-cart">
+          <CartContent
+            selectedSwatches={selectedSwatches}
+            setSelectedSwatches={setSelectedSwatches}
+            swatchRules={swatchRules}
+            rulesLoading={rulesLoading}
+            onBuyNow={onBuyNow}
+            isProcessing={isProcessing}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CartPanel: React.FC<{ 
+  selectedSwatches: Swatch[]; 
+  setSelectedSwatches: React.Dispatch<React.SetStateAction<Swatch[]>>; 
+  swatchRules: SwatchRulesData | null; 
+  rulesLoading: boolean; 
+}> = ({ selectedSwatches, setSelectedSwatches, swatchRules, rulesLoading }) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [dialogSwatch, setDialogSwatch] = useState<Swatch | null>(null);
+  const [isNormalButtonVisible, setIsNormalButtonVisible] = useState(true);
+  const [isCartDialogOpen, setIsCartDialogOpen] = useState(false);
+  const normalButtonRef = useRef<HTMLButtonElement>(null);
+
+  const handleBuyNow = async () => {
+    if (selectedSwatches.length === 0) {
+      toast.error('No swatches selected');
+      return;
+    }
+
+    if (!swatchRules) {
+      toast.error('Swatch rules not loaded. Please refresh the page.');
+      return;
+    }
+
+    if (!swatchRules.enabled) {
+      toast.error('Swatch purchasing is currently disabled');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const checkoutUrl = await createSwatchOnlyCart(selectedSwatches, swatchRules);
+      const redirectUrl = checkoutUrl || (window as any).ov25CheckoutUrl || window.location.origin + '/checkout/';
+      window.location.href = redirectUrl;
+    } catch (error) {
+      console.error('Failed to process swatch purchase:', error);
+      toast.error('Failed to process purchase. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Use IntersectionObserver to track when normal button is visible
+  useEffect(() => {
+    const button = normalButtonRef.current;
+    if (!button) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsNormalButtonVisible(entry.isIntersecting);
+        });
+      },
+      {
+        threshold: 0.1, // Trigger when 10% of button is visible
+        rootMargin: '0px',
+      }
+    );
+
+    observer.observe(button);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  return (
+    <div className="ov25-swatches-cart">
+      <CartContent
+        selectedSwatches={selectedSwatches}
+        setSelectedSwatches={setSelectedSwatches}
+        swatchRules={swatchRules}
+        rulesLoading={rulesLoading}
+        onBuyNow={handleBuyNow}
+        isProcessing={isProcessing}
+        buttonRef={normalButtonRef}
+      />
       
       {/* Fixed button - only show when normal button is not visible */}
       <button
-        onClick={handleBuyNow}
+        onClick={() => setIsCartDialogOpen(true)}
         className={`ov25-cart-buy-btn-fixed ${!isNormalButtonVisible ? 'ov25-cart-buy-btn-fixed--visible' : ''}`}
-        disabled={(selectedSwatches.length < (swatchRules?.minSwatches || 0)) || isProcessing || rulesLoading}
+        disabled={rulesLoading}
       >
-        {isProcessing ? 'Processing...' : rulesLoading ? 'Loading...' : (
+        {rulesLoading ? 'Loading...' : (
           <>
-            Order Samples
+            View Cart
             {swatchRules && (
               <span className="ov25-cart-buy-btn-count">
                 {' '}({selectedSwatches.length}/{swatchRules.maxSwatches})
@@ -614,6 +715,17 @@ const CartPanel: React.FC<{
           description={dialogSwatch.description || undefined}
         />
       )}
+
+      <CartDialog
+        isOpen={isCartDialogOpen}
+        onClose={() => setIsCartDialogOpen(false)}
+        selectedSwatches={selectedSwatches}
+        setSelectedSwatches={setSelectedSwatches}
+        swatchRules={swatchRules}
+        rulesLoading={rulesLoading}
+        onBuyNow={handleBuyNow}
+        isProcessing={isProcessing}
+      />
     </div>
   );
 };
@@ -625,13 +737,17 @@ const FilterPanel: React.FC<{
   selectedFilters: Set<string>;
   onToggleGroup: (group: string) => void;
 }> = ({ isOpen, onClose, allGroups, selectedFilters, onToggleGroup }) => {
-  // Prevent body scrolling when dialog is open
+  // Prevent body scrolling when dialog is open (mobile only)
   React.useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
+      // Only prevent scrolling on mobile (max-width: 767px)
+      const isMobile = window.matchMedia('(max-width: 767px)').matches;
+      if (isMobile) {
+        document.body.style.overflow = 'hidden';
+        return () => {
+          document.body.style.overflow = '';
+        };
+      }
     }
   }, [isOpen]);
 
@@ -759,18 +875,21 @@ const SwatchesApp: React.FC<{
   const filteredSwatches = useMemo(() => {
     let filtered = allSwatches;
 
-    // Apply search filter
+    // Apply search filter using string-similarity-js
     if (searchText) {
-      const q = searchText.toLowerCase();
-      filtered = filtered.filter((s) => {
-        const hay = [
-          s.name,
-          s.option,
-          s.description || '',
-          ...(Array.isArray(s.tags) ? s.tags : [])
-        ].join(' ').toLowerCase();
-        return hay.includes(q);
+      const searchLower = searchText.toLowerCase();
+      const scored = filtered.map((swatch) => {
+        const nameScore = stringSimilarity(searchLower, (swatch.name || '').toLowerCase());
+        const skuScore = stringSimilarity(searchLower, (swatch.sku || '').toLowerCase());
+        const maxScore = Math.max(nameScore, skuScore);
+        return { swatch, score: maxScore };
       });
+      
+      // Filter out results with score 0 (no match) and sort by score descending
+      filtered = scored
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map((item) => item.swatch);
     }
 
     // Apply group filter

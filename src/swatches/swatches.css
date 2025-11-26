@@ -1,6 +1,7 @@
 :root {
   --ov25-highlight-color: #00fbff;
   --ov25-swatch-image-size: 120px;
+  --ov25-swatch-image-size-mobile: 80px;
 }
 
 /* ===== MAIN LAYOUT ===== */
@@ -592,14 +593,21 @@
 }
 
 /* ===== CART ITEMS ===== */
+.ov25-cart-list-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  width: 100%;
+}
+
 .ov25-cart-list {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.5em;
+  justify-self: center;
 }
 
 @media (min-width: 640px) {
   .ov25-cart-list {
+    gap: 0.5em;
     grid-template-columns: repeat(3, 1fr);
   }
 }
@@ -617,12 +625,18 @@
 }
 
 .ov25-cart-item {
-  padding: 0.5em;
+  padding: 0.25em;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5em;
   position: relative;
+}
+
+@media (min-width: 768px) {
+  .ov25-cart-item {
+    padding: 0.5em;
+    gap: 0.5em;
+  }
 }
 
 .ov25-cart-item-empty {
@@ -643,6 +657,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Smaller empty slots in cart dialog on mobile */
+.ov25-cart-dialog .ov25-cart-empty-slot {
+  width: var(--ov25-swatch-image-size-mobile);
+  height: var(--ov25-swatch-image-size-mobile);
+}
+
+@media (min-width: 768px) {
+  .ov25-cart-dialog .ov25-cart-empty-slot {
+    width: var(--ov25-swatch-image-size);
+    height: var(--ov25-swatch-image-size);
+  }
 }
 
 .ov25-cart-thumb-container {
@@ -686,6 +713,55 @@
   border-radius: 50%;
   pointer-events: none;
   z-index: 1;
+}
+
+/* Smaller images in cart dialog on mobile */
+.ov25-cart-dialog .ov25-cart-thumb-container {
+  width: var(--ov25-swatch-image-size-mobile);
+  height: var(--ov25-swatch-image-size-mobile);
+}
+
+@media (min-width: 768px) {
+  .ov25-cart-dialog .ov25-cart-thumb-container {
+    width: var(--ov25-swatch-image-size);
+    height: var(--ov25-swatch-image-size);
+  }
+}
+
+.ov25-cart-dialog .ov25-cart-thumb {
+  width: var(--ov25-swatch-image-size-mobile);
+  height: var(--ov25-swatch-image-size-mobile);
+}
+
+@media (min-width: 768px) {
+  .ov25-cart-dialog .ov25-cart-thumb {
+    width: var(--ov25-swatch-image-size);
+    height: var(--ov25-swatch-image-size);
+  }
+}
+
+.ov25-cart-dialog .ov25-cart-thumb--placeholder {
+  width: var(--ov25-swatch-image-size-mobile);
+  height: var(--ov25-swatch-image-size-mobile);
+}
+
+@media (min-width: 768px) {
+  .ov25-cart-dialog .ov25-cart-thumb--placeholder {
+    width: var(--ov25-swatch-image-size);
+    height: var(--ov25-swatch-image-size);
+  }
+}
+
+.ov25-cart-dialog .ov25-cart-thumb-gradient {
+  width: var(--ov25-swatch-image-size-mobile);
+  height: var(--ov25-swatch-image-size-mobile);
+}
+
+@media (min-width: 768px) {
+  .ov25-cart-dialog .ov25-cart-thumb-gradient {
+    width: var(--ov25-swatch-image-size);
+    height: var(--ov25-swatch-image-size);
+  }
 }
 
 .ov25-cart-thumb-gradient.ov25-swatch-gradient-radial {
@@ -779,6 +855,8 @@
   flex-direction: column;
   gap: 1em;
   padding-bottom: 0.5em;
+  padding-inline: 1rem;
+  width: 100%;
 }
 
 @media (min-width: 1024px) {
@@ -922,10 +1000,6 @@
   .ov25-cart-footer {
     padding-bottom: 0.5em;
   }
-  
-  .ov25-cart-buy-btn-count {
-    display: none;
-  }
 }
 
 .ov25-cart-buy-btn:hover:not(:disabled) {
@@ -949,7 +1023,7 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1em;
+  padding: 0.25em;
 }
 
 .ov25-image-dialog {
@@ -1263,4 +1337,36 @@
 .ov25-filter-pill--selected:hover {
   background-color: #d1d5db;
   border-color: #d1d5db;
+}
+
+/* ===== CART DIALOG ===== */
+.ov25-cart-dialog {
+  position: relative;
+  background-color: #ffffff;
+  border-radius: 0.75em;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .ov25-cart-dialog {
+    padding: 0.25em;
+    max-width: 800px;
+  }
+}
+
+.ov25-cart-dialog .ov25-swatches-cart {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25em;
+  max-height: calc(90vh - 2em);
+  margin-block: 0;
+  overflow: hidden;
+  border-bottom: none;
 }
