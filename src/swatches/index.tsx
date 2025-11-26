@@ -901,7 +901,7 @@ const SwatchesApp: React.FC<{
           .map((item) => item.swatch);
       } else {
         filtered = scored
-          .filter((item) => item.score > 0)
+          .filter((item) => item.score > 0.4)
           .sort((a, b) => b.score - a.score)
           .map((item) => item.swatch);
       }
