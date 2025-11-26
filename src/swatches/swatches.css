@@ -35,14 +35,37 @@
   z-index: 10;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding-left: 1em;
+  gap: 1em;
 }
 
 @media (min-width: 768px) {
   .ov25-swatches-header {
     padding-left: 0;
   }
+}
+
+.ov25-filters-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.75em 1em;
+  border: 1px solid #e5e5e5;
+  background: white;
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  border-radius: 9999px;
+}
+
+.ov25-filters-button:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.ov25-filters-button svg {
+  flex-shrink: 0;
 }
 
 .ov25-search-container {
@@ -53,7 +76,8 @@
   position: relative;
   width: 100%;
   max-width: 100%;
-  margin-bottom: 1.5em;
+  border-radius: 9999px;
+  overflow: hidden;
 }
 
 @media (min-width: 640px) {
@@ -80,9 +104,72 @@
   transition: all 0.2s ease;
 }
 
-#ov25-swatches-search:focus {
+.ov25-search-container:focus-within {
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+#ov25-swatches-search:focus {
+  outline: none;
+}
+
+/* ===== SELECTED FILTERS ===== */
+.ov25-selected-filters-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  padding: 1em 0em 1em 0em;
+  margin-bottom: 1em;
+}
+
+@media (min-width: 768px) {
+  .ov25-selected-filters-container {
+    padding-left: 0;
+  }
+}
+
+/* Base pill styles shared between filter panel and selected filters */
+.ov25-filter-pill,
+.ov25-selected-filter-pill {
+  padding: 0.5em 0.75em;
+  border-radius: 9999px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  text-align: center;
+  transition: all 0.2s ease;
+  color: #111827;
+  white-space: nowrap;
+  width: auto;
+  height: fit-content;
+  margin: 0;
+}
+
+.ov25-selected-filter-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  border: 1px solid #e5e7eb;
+}
+
+.ov25-selected-filter-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: #374151;
+  transition: color 0.2s ease;
+}
+
+.ov25-selected-filter-remove:hover {
+  color: #111827;
+}
+
+.ov25-selected-filter-remove svg {
+  flex-shrink: 0;
 }
 
 /* ===== STATE MESSAGES ===== */
@@ -107,19 +194,34 @@
 .ov25-swatches-groups {
   display: flex;
   flex-direction: column;
-  padding: 1em;
-}
-
-@media (max-width: 768px) {
-  .ov25-swatches-groups {
-    padding: 0px;
-  }
+  padding-block: 1em;
 }
 
 .ov25-swatch-group {
   display: flex;
   flex-direction: column;
   gap: 1em;
+}
+
+.ov25-swatch-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5em;
+}
+
+.ov25-swatch-subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75em;
+}
+
+.ov25-swatch-subgroup-header {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+  padding: 0.5em 0;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .ov25-swatch-group-header {
@@ -165,7 +267,6 @@
   color: #111827;
   margin-bottom: 1em;
   margin-top: 0;
-  padding-left: 1em;
 }
 
 @media (min-width: 768px) {
@@ -436,6 +537,12 @@
   border-radius: 0;
 }
 
+.ov25-swatch-zoom-btn svg {
+  width: 20px !important;
+  height: 20px !important;
+  flex-shrink: 0;
+}
+
 .ov25-swatch-zoom-btn:hover {
   background-color: #e5e7eb;
 }
@@ -447,7 +554,6 @@
 /* ===== CART PANEL ===== */
 .ov25-swatches-cart {
   width: 100%;
-  padding: 0 1em;
   min-height: 180px;
   order: 1;
   flex-shrink: 0;
@@ -627,6 +733,12 @@
   transition: background-color 0.2s ease;
 }
 
+.ov25-cart-remove svg {
+  width: 32px !important;
+  height: 32px !important;
+  flex-shrink: 0;
+}
+
 .ov25-cart-remove:hover {
   background-color: #e5e7eb;
 }
@@ -730,45 +842,70 @@
   flex-shrink: 0;
 }
 
-/* Fixed button for mobile - hidden on desktop */
+/* Fixed button - appears when normal button is off-screen */
 .ov25-cart-buy-btn-fixed {
-  display: none;
+  position: fixed;
+  z-index: 100;
+  background: rgb(0 0 0/var(--tw-bg-opacity,1));
+  color: #ffffff;
+  border: none;
+  padding: 0.75em;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.3s ease, opacity 0.3s ease, background-color 0.2s ease;
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+  flex-shrink: 0;
 }
 
+/* Mobile: full width at bottom */
 @media (max-width: 1023px) {
   .ov25-cart-buy-btn-fixed {
-    display: block;
-    position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     width: 100%;
-    z-index: 100;
     border-radius: 0;
-    padding: 1em;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-    background: rgb(0 0 0/var(--tw-bg-opacity,1));
-    color: #ffffff;
-    border: none;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
   }
-  
-  .ov25-cart-buy-btn-fixed:hover:not(:disabled) {
-    background: #16a34a;
-  }
-  
-  .ov25-cart-buy-btn-fixed:disabled {
-    background: #9ca3af;
-    cursor: not-allowed;
+
+  .ov25-cart-buy-btn-fixed--visible {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
   }
   
   /* Add padding to app container to prevent content from being hidden behind fixed button */
   #ov25-swatches-app {
     padding-bottom: 80px;
   }
+}
+
+/* Desktop: bottom right corner */
+@media (min-width: 1024px) {
+  .ov25-cart-buy-btn-fixed {
+    bottom: 2em;
+    right: 2em;
+    width: auto;
+    min-width: 200px;
+  }
+
+  .ov25-cart-buy-btn-fixed--visible {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.ov25-cart-buy-btn-fixed:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.ov25-cart-buy-btn-fixed:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
 }
 
 .ov25-cart-buy-btn-count {
@@ -845,6 +982,12 @@
   transition: background-color 0.2s ease;
 }
 
+.ov25-image-dialog-close svg {
+  width: 24px !important;
+  height: 24px !important;
+  flex-shrink: 0;
+}
+
 .ov25-image-dialog-close:hover {
   background-color: rgba(0, 0, 0, 0.7);
 }
@@ -865,6 +1008,12 @@
   cursor: pointer;
   z-index: 10;
   transition: background-color 0.2s ease;
+}
+
+.ov25-replace-dialog-close svg {
+  width: 24px !important;
+  height: 24px !important;
+  flex-shrink: 0;
 }
 
 .ov25-replace-dialog-close:hover {
@@ -1003,4 +1152,115 @@
   -webkit-line-clamp: 2;
   line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+/* ===== FILTER PANEL ===== */
+.ov25-filter-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 400px;
+  background-color: #ffffff;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  pointer-events: none;
+}
+
+.ov25-filter-panel--open {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+@media (max-width: 767px) {
+  .ov25-filter-panel {
+    max-width: 100%;
+    bottom: 0;
+    top: auto;
+    height: 80vh;
+    max-height: 80vh;
+    border-radius: 1em 1em 0 0;
+    transform: translateY(100%);
+  }
+
+  .ov25-filter-panel--open {
+    transform: translateY(0);
+  }
+}
+
+.ov25-filter-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5em;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.ov25-filter-panel-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  text-align: center;
+}
+
+.ov25-filter-panel-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.5em;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  border-radius: 0.25em;
+  position: absolute;
+  right: 1.5em;
+}
+
+.ov25-filter-panel-close:hover {
+  background-color: #f3f4f6;
+}
+
+.ov25-filter-panel-close svg {
+  flex-shrink: 0;
+}
+
+.ov25-filter-pills-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1em 1.5em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  align-content: flex-start;
+}
+
+.ov25-filter-pill {
+  display: inline-block;
+  border: 1px solid #e5e5e5;
+  background-color: white;
+}
+
+.ov25-filter-pill:hover {
+  background-color: #e5e7eb;
+  border-color: #e5e7eb;
+}
+
+.ov25-filter-pill--selected {
+  background-color: #e5e7eb;
+  border-color: #e5e7eb;
+}
+
+.ov25-filter-pill--selected:hover {
+  background-color: #d1d5db;
+  border-color: #d1d5db;
 }
