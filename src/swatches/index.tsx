@@ -439,12 +439,15 @@ const CartContent: React.FC<{
     ? swatchRules.maxSwatches
     : Math.min(swatchRules?.freeSwatchLimit || 0, swatchRules?.maxSwatches || 0);
 
+  const maxSwatches = swatchRules?.maxSwatches || 0;
+
   return (
     <>
-      <h2 className="ov25-cart-title">Cart ({selectedSwatches.length}/{maxAllowed})</h2>
-      
       <div className="ov25-cart-list-wrapper">
-        <div className="ov25-cart-list">
+        <div 
+          className="ov25-cart-list"
+          style={{ '--ov25-cart-columns': maxSwatches } as React.CSSProperties}
+        >
           {Array.from({ length: maxAllowed }, (_, index) => {
             const swatch = selectedSwatches[index];
             if (swatch) {
@@ -548,18 +551,27 @@ const CartDialog: React.FC<{
   onBuyNow: () => void;
   isProcessing: boolean;
 }> = ({ isOpen, onClose, selectedSwatches, setSelectedSwatches, swatchRules, rulesLoading, onBuyNow, isProcessing }) => {
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  // Detect mobile on mount and resize
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.matchMedia('(max-width: 767px)').matches);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Prevent body scrolling when dialog is open (mobile only)
   React.useEffect(() => {
-    if (isOpen) {
-      const isMobile = window.matchMedia('(max-width: 767px)').matches;
-      if (isMobile) {
-        document.body.style.overflow = 'hidden';
-        return () => {
-          document.body.style.overflow = '';
-        };
-      }
+    if (isOpen && isMobile) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
     }
-  }, [isOpen]);
+  }, [isOpen, isMobile]);
 
   // Handle ESC key to close dialog
   React.useEffect(() => {
@@ -577,6 +589,35 @@ const CartDialog: React.FC<{
     };
   }, [isOpen, onClose]);
 
+  // Mobile: drawer from bottom (no overlay) - always render to allow animations
+  if (isMobile) {
+    return (
+      <div className={`ov25-cart-drawer ${isOpen ? 'ov25-cart-drawer--open' : ''}`}>
+        <div className="ov25-cart-drawer-header">
+          <h2 className="ov25-cart-drawer-title">Cart ({selectedSwatches.length}/{swatchRules?.maxSwatches || 0})</h2>
+          <button
+            className="ov25-filter-panel-close"
+            onClick={onClose}
+            aria-label="Close cart"
+          >
+            <X size={24} />
+          </button>
+        </div>
+        <div className="ov25-swatches-cart">
+          <CartContent
+            selectedSwatches={selectedSwatches}
+            setSelectedSwatches={setSelectedSwatches}
+            swatchRules={swatchRules}
+            rulesLoading={rulesLoading}
+            onBuyNow={onBuyNow}
+            isProcessing={isProcessing}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop: dialog with overlay - only render when open
   if (!isOpen) return null;
 
   return (
@@ -597,6 +638,7 @@ const CartDialog: React.FC<{
           <X size={24} />
         </button>
         <div className="ov25-swatches-cart">
+          <h2 className="ov25-cart-title">Cart ({selectedSwatches.length}/{swatchRules?.maxSwatches || 0})</h2>
           <CartContent
             selectedSwatches={selectedSwatches}
             setSelectedSwatches={setSelectedSwatches}
@@ -842,14 +884,44 @@ const SwatchesApp: React.FC<{
   };
 
   // Extract unique groups from all swatches, excluding empty strings and "Default Group"
-  const allGroups = useMemo(() => {
+  // Also add option names for options that have no groups
+  const { allGroups, optionFilters } = useMemo(() => {
     const groups = new Set<string>();
+    const optionFilterSet = new Set<string>();
+    
+    // First, collect all groups
     allSwatches.forEach((swatch) => {
       if (swatch.group && swatch.group.trim() !== '' && swatch.group !== 'Default Group') {
         groups.add(swatch.group);
       }
     });
-    return Array.from(groups).sort();
+    
+    // Group swatches by option to check for options with no groups
+    const swatchesByOption = allSwatches.reduce((acc, swatch) => {
+      const option = swatch.option || 'Uncategorized';
+      if (!acc[option]) acc[option] = [];
+      acc[option].push(swatch);
+      return acc;
+    }, {} as Record<string, Swatch[]>);
+    
+    // Check each option: if all swatches in the option have no group (empty, missing, or "Default Group"),
+    // add the option name as a filter
+    // Note: "Default Group" does not count as having a group
+    Object.entries(swatchesByOption).forEach(([option, swatches]) => {
+      const hasNoGroups = swatches.every(swatch => {
+        const group = swatch.group || '';
+        return group.trim() === '' || group === 'Default Group';
+      });
+      if (hasNoGroups && swatches.length > 0) {
+        groups.add(option);
+        optionFilterSet.add(option);
+      }
+    });
+    
+    return {
+      allGroups: Array.from(groups).sort(),
+      optionFilters: optionFilterSet
+    };
   }, [allSwatches]);
 
   const handleToggleGroup = (group: string) => {
@@ -907,13 +979,26 @@ const SwatchesApp: React.FC<{
       }
     }
 
-    // Apply group filter
+    // Apply filter (group or option-based)
     if (selectedFilters.size > 0) {
-      filtered = filtered.filter((s) => selectedFilters.has(s.group));
+      // Separate option filters from group filters
+      const selectedOptionFilters = Array.from(selectedFilters).filter(filter => optionFilters.has(filter));
+      const selectedGroupFilters = Array.from(selectedFilters).filter(filter => !optionFilters.has(filter));
+      
+      if (selectedOptionFilters.length > 0) {
+        // Filter by option
+        filtered = filtered.filter((s) => {
+          const option = s.option || 'Uncategorized';
+          return selectedOptionFilters.includes(option);
+        });
+      } else if (selectedGroupFilters.length > 0) {
+        // Filter by group
+        filtered = filtered.filter((s) => selectedGroupFilters.includes(s.group));
+      }
     }
 
     return filtered;
-  }, [allSwatches, searchText, selectedFilters]);
+  }, [allSwatches, searchText, selectedFilters, optionFilters]);
 
   const groupedSwatches = useMemo(() => {
     // First group by option
@@ -1020,10 +1105,12 @@ const SwatchesApp: React.FC<{
             const optionGroups = groupedSwatches[option];
             const swatchCount = Object.values(optionGroups).flat().length;
             
-            // Sort groups: empty group first, then alphabetically
+            // Sort groups: empty group and "Default Group" first, then alphabetically
             const sortedGroupKeys = Object.keys(optionGroups).sort((a, b) => {
-              if (a === '' && b !== '') return -1;
-              if (a !== '' && b === '') return 1;
+              const aIsEmpty = a === '' || a === 'Default Group';
+              const bIsEmpty = b === '' || b === 'Default Group';
+              if (aIsEmpty && !bIsEmpty) return -1;
+              if (!aIsEmpty && bIsEmpty) return 1;
               return a.localeCompare(b);
             });
             
@@ -1044,7 +1131,8 @@ const SwatchesApp: React.FC<{
                   <div className="ov25-swatch-option-content">
                     {sortedGroupKeys.map((groupKey) => {
                       const groupSwatches = optionGroups[groupKey];
-                      const hasGroup = groupKey !== '';
+                      // Hide heading for empty groups and "Default Group"
+                      const hasGroup = groupKey !== '' && groupKey !== 'Default Group';
                       
                       return (
                         <div key={groupKey || 'ungrouped'} className="ov25-swatch-subgroup">
