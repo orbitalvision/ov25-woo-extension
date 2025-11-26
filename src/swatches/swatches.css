@@ -280,34 +280,37 @@
 /* ===== SWATCH GRID ===== */
 .ov25-swatches-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, 140px);
+  -webkit-grid-gap: 0.5em;
+  grid-gap: 0.5em;
   gap: var(--ov25-swatch-grid-gap);
   padding-bottom: 1.25em;
   justify-content: center;
+  justify-items: center;
   padding-right: .1em;
 }
 
 @media (min-width: 640px) {
   .ov25-swatches-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, 140px);
   }
 }
 
 @media (min-width: 768px) {
   .ov25-swatches-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, 160px);
   }
 }
 
 @media (min-width: 900px) {
   .ov25-swatches-grid {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(5, 160px);
   }
 }
 
 @media (min-width: 1024px) {
   .ov25-swatches-grid {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(6, 160px);
   }
 }
 
@@ -621,38 +624,42 @@
   display: grid;
   /* Use CSS variable if set, otherwise default to 2 columns */
   /* Cap at 2 columns on small screens */
-  grid-template-columns: repeat(min(var(--ov25-cart-columns, 2), 2), 1fr);
-  justify-self: center;
+  /* Use fixed width columns to match item width exactly */
+  grid-template-columns: repeat(min(var(--ov25-cart-columns, 2), 2), 140px);
+  justify-content: center;
+  justify-items: center;
   max-width: 100%;
   box-sizing: border-box;
+  -webkit-grid-gap: 0.5em;
+  grid-gap: 0.5em;
   gap: var(--ov25-swatch-grid-gap);
 }
 
 @media (min-width: 640px) {
   .ov25-cart-list {
     /* Cap at 3 columns on medium screens */
-    grid-template-columns: repeat(min(var(--ov25-cart-columns, 3), 3), 1fr);
+    grid-template-columns: repeat(min(var(--ov25-cart-columns, 3), 3), 140px);
   }
 }
 
 @media (min-width: 768px) {
   .ov25-cart-list {
     /* Cap at 4 columns on larger screens */
-    grid-template-columns: repeat(min(var(--ov25-cart-columns, 4), 4), 1fr);
+    grid-template-columns: repeat(min(var(--ov25-cart-columns, 4), 4), 160px);
   }
 }
 
 @media (min-width: 900px) {
   .ov25-cart-list {
     /* Cap at 5 columns on even larger screens */
-    grid-template-columns: repeat(min(var(--ov25-cart-columns, 5), 5), 1fr);
+    grid-template-columns: repeat(min(var(--ov25-cart-columns, 5), 5), 160px);
   }
 }
 
 @media (min-width: 1024px) {
   .ov25-cart-list {
     /* Use the full variable value (up to 6) on largest screens */
-    grid-template-columns: repeat(min(var(--ov25-cart-columns, 6), 6), 1fr);
+    grid-template-columns: repeat(min(var(--ov25-cart-columns, 6), 6), 160px);
   }
 }
 
