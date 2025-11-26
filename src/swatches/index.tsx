@@ -879,17 +879,32 @@ const SwatchesApp: React.FC<{
     if (searchText) {
       const searchLower = searchText.toLowerCase();
       const scored = filtered.map((swatch) => {
+        // Fuzzy search for name
         const nameScore = stringSimilarity(searchLower, (swatch.name || '').toLowerCase());
-        const skuScore = stringSimilarity(searchLower, (swatch.sku || '').toLowerCase());
+        
+        // Exact match (case-insensitive) for SKU
+        const skuMatch = (swatch.sku || '').toLowerCase().includes(searchLower);
+        const skuScore = skuMatch ? 1 : 0;
+        
         const maxScore = Math.max(nameScore, skuScore);
-        return { swatch, score: maxScore };
+        return { swatch, score: maxScore, hasExactSkuMatch: skuMatch };
       });
       
-      // Filter out results with score 0 (no match) and sort by score descending
-      filtered = scored
-        .filter((item) => item.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .map((item) => item.swatch);
+      // Check if there are any exact SKU matches
+      const hasExactSkuMatches = scored.some((item) => item.hasExactSkuMatch);
+      
+      // If there are exact SKU matches, only show those
+      // Otherwise, show all matches sorted by score
+      if (hasExactSkuMatches) {
+        filtered = scored
+          .filter((item) => item.hasExactSkuMatch)
+          .map((item) => item.swatch);
+      } else {
+        filtered = scored
+          .filter((item) => item.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .map((item) => item.swatch);
+      }
     }
 
     // Apply group filter
