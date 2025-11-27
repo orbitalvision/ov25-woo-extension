@@ -190,14 +190,14 @@ async function createSwatchOnlyCart(swatches: Swatch[], rules: SwatchRulesData):
   }
 }
 
-const ReplaceDialog: React.FC<{
+const MobileDrawer: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  cartSwatches: Swatch[];
-  newSwatch: Swatch;
-  onReplace: (oldSwatch: Swatch) => void;
-}> = ({ isOpen, onClose, cartSwatches, newSwatch, onReplace }) => {
-  // Prevent body scrolling when dialog is open
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}> = ({ isOpen, onClose, title, children, className = '' }) => {
+  // Prevent body scrolling when drawer is open
   React.useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -207,7 +207,7 @@ const ReplaceDialog: React.FC<{
     }
   }, [isOpen]);
 
-  // Handle ESC key to close dialog
+  // Handle ESC key to close drawer
   React.useEffect(() => {
     if (!isOpen) return;
 
@@ -223,6 +223,98 @@ const ReplaceDialog: React.FC<{
     };
   }, [isOpen, onClose]);
 
+  return (
+    <div className={`ov25-mobile-drawer ${isOpen ? 'ov25-mobile-drawer--open' : ''} ${className}`}>
+      <div className="ov25-mobile-drawer-header">
+        <h2 className="ov25-mobile-drawer-title">{title}</h2>
+        <button
+          className="ov25-filter-panel-close"
+          onClick={onClose}
+          aria-label="Close drawer"
+        >
+          <X size={24} />
+        </button>
+      </div>
+      <div className="ov25-mobile-drawer-content">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const ReplaceDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  cartSwatches: Swatch[];
+  newSwatch: Swatch;
+  onReplace: (oldSwatch: Swatch) => void;
+}> = ({ isOpen, onClose, cartSwatches, newSwatch, onReplace }) => {
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  // Detect mobile on mount and resize
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.matchMedia('(max-width: 767px)').matches);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const listContent = (
+    <>
+      <p className="ov25-replace-dialog-subtitle">
+        Select a swatch to replace with <strong>{newSwatch.name}</strong>
+      </p>
+      <div className="ov25-replace-dialog-list">
+        {cartSwatches.map((cartSwatch) => {
+          const imgSrc = cartSwatch.thumbnail?.miniThumbnails?.medium;
+          return (
+            <div
+              key={cartSwatch.id}
+              className="ov25-replace-dialog-item"
+              onClick={() => {
+                onReplace(cartSwatch);
+                onClose();
+              }}
+            >
+              <div className="ov25-replace-dialog-thumb-container">
+                {imgSrc ? (
+                  <img 
+                    src={imgSrc} 
+                    alt={cartSwatch.name}
+                    className="ov25-replace-dialog-thumb"
+                  />
+                ) : (
+                  <div className="ov25-replace-dialog-thumb ov25-replace-dialog-thumb--placeholder">
+                    No img
+                  </div>
+                )}
+                <div className="ov25-cart-thumb-gradient ov25-swatch-gradient-radial"></div>
+                <div className="ov25-cart-thumb-gradient ov25-swatch-gradient-shadow"></div>
+              </div>
+              <div className="ov25-replace-dialog-item-name">{cartSwatch.name}</div>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+
+  // Mobile: drawer from bottom (no overlay) - always render to allow animations
+  if (isMobile) {
+    return (
+      <MobileDrawer
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Your cart is full"
+      >
+        {listContent}
+      </MobileDrawer>
+    );
+  }
+
+  // Desktop: dialog with overlay - only render when open
   if (!isOpen) return null;
 
   return (
@@ -243,41 +335,7 @@ const ReplaceDialog: React.FC<{
           <X size={24} />
         </button>
         <h2 className="ov25-replace-dialog-title">Your cart is full</h2>
-        <p className="ov25-replace-dialog-subtitle">
-          Select a swatch to replace with <strong>{newSwatch.name}</strong>
-        </p>
-        <div className="ov25-replace-dialog-list">
-          {cartSwatches.map((cartSwatch) => {
-            const imgSrc = cartSwatch.thumbnail?.miniThumbnails?.medium;
-            return (
-              <div
-                key={cartSwatch.id}
-                className="ov25-replace-dialog-item"
-                onClick={() => {
-                  onReplace(cartSwatch);
-                  onClose();
-                }}
-              >
-                <div className="ov25-replace-dialog-thumb-container">
-                  {imgSrc ? (
-                    <img 
-                      src={imgSrc} 
-                      alt={cartSwatch.name}
-                      className="ov25-replace-dialog-thumb"
-                    />
-                  ) : (
-                    <div className="ov25-replace-dialog-thumb ov25-replace-dialog-thumb--placeholder">
-                      No img
-                    </div>
-                  )}
-                  <div className="ov25-cart-thumb-gradient ov25-swatch-gradient-radial"></div>
-                  <div className="ov25-cart-thumb-gradient ov25-swatch-gradient-shadow"></div>
-                </div>
-                <div className="ov25-replace-dialog-item-name">{cartSwatch.name}</div>
-              </div>
-            );
-          })}
-        </div>
+        {listContent}
       </div>
     </div>
   );
@@ -485,6 +543,10 @@ const CartContent: React.FC<{
               return (
                 <div key={`empty-${index}`} className="ov25-cart-item-empty">
                   <div className="ov25-cart-empty-slot"></div>
+                  <div className="ov25-cart-item-body">
+                    <div className="ov25-cart-item-name"></div>
+                    <div className="ov25-cart-item-option"></div>
+                  </div>
                 </div>
               );
             }
@@ -563,46 +625,14 @@ const CartDialog: React.FC<{
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Prevent body scrolling when dialog is open (mobile only)
-  React.useEffect(() => {
-    if (isOpen && isMobile) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isOpen, isMobile]);
-
-  // Handle ESC key to close dialog
-  React.useEffect(() => {
-    if (!isOpen) return;
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [isOpen, onClose]);
-
   // Mobile: drawer from bottom (no overlay) - always render to allow animations
   if (isMobile) {
     return (
-      <div className={`ov25-cart-drawer ${isOpen ? 'ov25-cart-drawer--open' : ''}`}>
-        <div className="ov25-cart-drawer-header">
-          <h2 className="ov25-cart-drawer-title">Cart ({selectedSwatches.length}/{swatchRules?.maxSwatches || 0})</h2>
-          <button
-            className="ov25-filter-panel-close"
-            onClick={onClose}
-            aria-label="Close cart"
-          >
-            <X size={24} />
-          </button>
-        </div>
+      <MobileDrawer
+        isOpen={isOpen}
+        onClose={onClose}
+        title={`Cart (${selectedSwatches.length}/${swatchRules?.maxSwatches || 0})`}
+      >
         <div className="ov25-swatches-cart">
           <CartContent
             selectedSwatches={selectedSwatches}
@@ -613,7 +643,7 @@ const CartDialog: React.FC<{
             isProcessing={isProcessing}
           />
         </div>
-      </div>
+      </MobileDrawer>
     );
   }
 
@@ -779,36 +809,50 @@ const FilterPanel: React.FC<{
   selectedFilters: Set<string>;
   onToggleGroup: (group: string) => void;
 }> = ({ isOpen, onClose, allGroups, selectedFilters, onToggleGroup }) => {
-  // Prevent body scrolling when dialog is open (mobile only)
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  // Detect mobile on mount and resize
   React.useEffect(() => {
-    if (isOpen) {
-      // Only prevent scrolling on mobile (max-width: 767px)
-      const isMobile = window.matchMedia('(max-width: 767px)').matches;
-      if (isMobile) {
-        document.body.style.overflow = 'hidden';
-        return () => {
-          document.body.style.overflow = '';
-        };
-      }
-    }
-  }, [isOpen]);
-
-  // Handle ESC key to close panel
-  React.useEffect(() => {
-    if (!isOpen) return;
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
+    const checkMobile = () => {
+      setIsMobile(window.matchMedia('(max-width: 767px)').matches);
     };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [isOpen, onClose]);
+  const filterContent = (
+    <div className="ov25-filter-pills-container">
+      {allGroups.map((group) => {
+        const isSelected = selectedFilters.has(group);
+        return (
+          <button
+            key={group}
+            className={`ov25-filter-pill ${isSelected ? 'ov25-filter-pill--selected' : ''}`}
+            data-selected={isSelected ? 'true' : 'false'}
+            onClick={() => onToggleGroup(group)}
+          >
+            {group}
+          </button>
+        );
+      })}
+    </div>
+  );
 
+  // Mobile: use drawer
+  if (isMobile) {
+    return (
+      <MobileDrawer
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Filters"
+      >
+        {filterContent}
+      </MobileDrawer>
+    );
+  }
+
+  // Desktop: slide from right
   return (
     <div className={`ov25-filter-panel ${isOpen ? 'ov25-filter-panel--open' : ''}`}>
       <div className="ov25-filter-panel-header">
@@ -821,21 +865,7 @@ const FilterPanel: React.FC<{
           <X size={24} />
         </button>
       </div>
-      <div className="ov25-filter-pills-container">
-        {allGroups.map((group) => {
-          const isSelected = selectedFilters.has(group);
-          return (
-            <button
-              key={group}
-              className={`ov25-filter-pill ${isSelected ? 'ov25-filter-pill--selected' : ''}`}
-              data-selected={isSelected ? 'true' : 'false'}
-              onClick={() => onToggleGroup(group)}
-            >
-              {group}
-            </button>
-          );
-        })}
-      </div>
+      {filterContent}
     </div>
   );
 };
