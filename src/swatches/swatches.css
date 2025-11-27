@@ -3,7 +3,9 @@
   --ov25-swatch-size-mobile: 70px;
   --ov25-swatch-size-medium: 100px;
   --ov25-swatch-size-desktop: 120px;
-  --ov25-swatch-grid-gap: 0.5em;
+  --ov25-swatch-grid-gap-mobile: 0.5em;
+  --ov25-swatch-grid-gap-desktop: 1em;
+  --ov25-swatch-grid-gap: var(--ov25-swatch-grid-gap-mobile);
 }
 
 /* ===== MAIN LAYOUT ===== */
@@ -283,13 +285,21 @@
   display: grid;
   /* Minimum 4 columns per row */
   grid-template-columns: repeat(4, var(--ov25-swatch-size-mobile));
-  -webkit-grid-gap: 0.5em;
-  grid-gap: 0.5em;
-  gap: var(--ov25-swatch-grid-gap);
+  -webkit-grid-gap: var(--ov25-swatch-grid-gap-mobile);
+  grid-gap: var(--ov25-swatch-grid-gap-mobile);
+  gap: var(--ov25-swatch-grid-gap-mobile);
   padding-bottom: 1.25em;
   justify-content: center;
   justify-items: center;
   padding-right: .1em;
+}
+
+@media (min-width: 768px) {
+  .ov25-swatches-grid {
+    -webkit-grid-gap: var(--ov25-swatch-grid-gap-desktop);
+    grid-gap: var(--ov25-swatch-grid-gap-desktop);
+    gap: var(--ov25-swatch-grid-gap-desktop);
+  }
 }
 
 @media (min-width: 640px) {
@@ -717,9 +727,17 @@
   justify-items: center;
   max-width: 100%;
   box-sizing: border-box;
-  -webkit-grid-gap: 0.5em;
-  grid-gap: 0.5em;
-  gap: var(--ov25-swatch-grid-gap);
+  -webkit-grid-gap: var(--ov25-swatch-grid-gap-mobile);
+  grid-gap: var(--ov25-swatch-grid-gap-mobile);
+  gap: var(--ov25-swatch-grid-gap-mobile);
+}
+
+@media (min-width: 768px) {
+  .ov25-cart-list {
+    -webkit-grid-gap: var(--ov25-swatch-grid-gap-desktop);
+    grid-gap: var(--ov25-swatch-grid-gap-desktop);
+    gap: var(--ov25-swatch-grid-gap-desktop);
+  }
 }
 
 @media (min-width: 640px) {
@@ -1481,9 +1499,9 @@
   display: grid;
   /* Minimum 4 columns per row on mobile */
   grid-template-columns: repeat(4, var(--ov25-swatch-size-mobile));
-  -webkit-grid-gap: var(--ov25-swatch-grid-gap);
-  grid-gap: var(--ov25-swatch-grid-gap);
-  gap: var(--ov25-swatch-grid-gap);
+  -webkit-grid-gap: var(--ov25-swatch-grid-gap-mobile);
+  grid-gap: var(--ov25-swatch-grid-gap-mobile);
+  gap: var(--ov25-swatch-grid-gap-mobile);
   overflow-y: auto;
   padding: 0.25em;
   justify-content: center;
@@ -1499,7 +1517,9 @@
 @media (min-width: 768px) {
   .ov25-replace-dialog-list {
     grid-template-columns: repeat(4, var(--ov25-swatch-size-desktop));
-    gap: 1em;
+    -webkit-grid-gap: var(--ov25-swatch-grid-gap-desktop);
+    grid-gap: var(--ov25-swatch-grid-gap-desktop);
+    gap: var(--ov25-swatch-grid-gap-desktop);
     padding: 0.5em;
   }
 }
