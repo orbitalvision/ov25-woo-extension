@@ -2,7 +2,7 @@ import * as OV25 from 'ov25-ui-react18';
 
 // Declare global variables for TypeScript
 declare global {
-    interface Window {
+        interface Window {
         ov25Settings: {
             logoURL: string;
             mobileLogoURL: string;
@@ -17,6 +17,8 @@ declare global {
             priceSelector: string;
             customCSS: string;
             swatchProductId?: string;
+            restBase?: string;
+            createSwatchCartUrl?: string;
         };
         ov25GenerateThumbnail: () => Promise<string>;
         wc_price?: (price: number) => string;
@@ -394,25 +396,28 @@ async function createSwatchOnlyCart(swatches: Swatch[], rules: SwatchRulesData):
             timestamp: Date.now()
         };
 
-        // Send to backend to create swatch-only cart
-        const response = await fetch(window.location.origin + '/wp-admin/admin-ajax.php', {
+        // Send to backend to create swatch-only cart using REST API
+        // Use WordPress-provided URL which handles both pretty and plain permalinks
+        const restUrl = window.ov25Settings?.createSwatchCartUrl || 
+            (window.ov25Settings?.restBase ? `${window.ov25Settings.restBase}ov25/v1/create-swatch-cart` : null) ||
+            window.location.origin + '/?rest_route=/ov25/v1/create-swatch-cart';
+        const response = await fetch(restUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
+                'Content-Type': 'application/json',
             },
-            body: 'action=ov25_create_swatch_cart&swatch_data=' + encodeURIComponent(JSON.stringify(swatchCartData))
+            body: JSON.stringify({
+                swatch_data: JSON.stringify(swatchCartData)
+            })
         });
 
         if (!response.ok) {
-            throw new Error('Network error creating swatch cart');
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Failed to create swatch cart: ${response.status}`);
         }
 
         const result = await response.json();
-        if (!result?.success) {
-            throw new Error(result?.data || 'Failed to create swatch cart');
-        }
-
-        const checkoutUrl = result.data?.checkout_url as string | undefined;
+        const checkoutUrl = result.checkout_url as string | undefined;
         if (checkoutUrl) { (window as any).ov25CheckoutUrl = checkoutUrl; }
         return checkoutUrl;
     } catch (error) {

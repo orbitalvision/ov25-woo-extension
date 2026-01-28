@@ -34,6 +34,22 @@ if ( ! class_exists( 'OV25_Swatch_API' ) ) {
 					'permission_callback' => '__return_true',
 				]
 			);
+
+			register_rest_route(
+				'ov25/v1',
+				'/create-swatch-cart',
+				[
+					'methods'             => 'POST',
+					'callback'            => [ __CLASS__, 'create_swatch_cart' ],
+					'permission_callback' => '__return_true',
+					'args'                => [
+						'swatch_data' => [
+							'required' => true,
+							'type'     => 'string',
+						],
+					],
+				]
+			);
 		}
 
 		/**
@@ -122,6 +138,73 @@ if ( ! class_exists( 'OV25_Swatch_API' ) ) {
 			}
 
 			return rest_ensure_response( $data );
+		}
+
+		/**
+		 * Create a swatch-only cart.
+		 */
+		public static function create_swatch_cart( WP_REST_Request $request ) {
+			// Verify WooCommerce is loaded
+			if ( ! class_exists( 'WooCommerce' ) || ! function_exists( 'WC' ) ) {
+				return new WP_Error( 'woocommerce_not_loaded', 'WooCommerce not available', [ 'status' => 500 ] );
+			}
+
+			try {
+				// Get swatch data from request
+				$swatch_data_json = $request->get_param( 'swatch_data' );
+				$swatch_data = json_decode( wp_unslash( $swatch_data_json ), true );
+				
+				if ( ! $swatch_data || ! is_array( $swatch_data ) ) {
+					return new WP_Error( 'invalid_swatch_data', 'No swatch data provided', [ 'status' => 400 ] );
+				}
+
+				// Store current cart contents to restore later
+				$current_cart = WC()->cart->get_cart();
+				WC()->session->set( 'ov25_original_cart', $current_cart );
+				
+				// Clear the main cart
+				WC()->cart->empty_cart();
+				
+				// Add swatches to the empty cart
+				$swatches = isset( $swatch_data['swatches'] ) ? $swatch_data['swatches'] : [];
+				$rules = isset( $swatch_data['rules'] ) ? $swatch_data['rules'] : [];
+				
+				// Resolve swatch product id on the server (create if missing)
+				$product_id = ov25_ensure_swatch_product_exists();
+				
+				foreach ( $swatches as $index => $swatch ) {
+					$is_free = $index < ( $rules['freeSwatchLimit'] ?? 0 );
+					$swatch_price = $is_free ? 0 : ( $rules['pricePerSwatch'] ?? 0 );
+					
+					$cart_item_data = array(
+						'swatch_manufacturer_id' => $swatch['manufacturerId'] ?? '',
+						'swatch_name' => $swatch['name'] ?? '',
+						'swatch_option' => $swatch['option'] ?? '',
+						'swatch_total_count' => count( $swatches ),
+						'swatch_price' => $swatch_price,
+						'swatch_sku' => $swatch['sku'] ?? '',
+						'ov25-thumbnail' => $swatch['thumbnail']['miniThumbnails']['small'] ?? '',
+					);
+					
+					WC()->cart->add_to_cart( $product_id, 1, 0, array(), $cart_item_data );
+				}
+				
+				// Mark this as a swatch-only cart
+				WC()->session->set( 'ov25_swatch_only_cart', true );
+				
+				// Return the correct checkout URL (respects permalinks/settings)
+				$checkout_url = function_exists( 'wc_get_checkout_url' ) ? wc_get_checkout_url() : home_url( '/checkout/' );
+				
+				return rest_ensure_response( [
+					'success' => true,
+					'message' => 'Swatch-only cart created successfully',
+					'checkout_url' => $checkout_url,
+				] );
+				
+			} catch ( Exception $e ) {
+				error_log( 'OV25 Woo Extension: Error creating swatch-only cart - ' . $e->getMessage() );
+				return new WP_Error( 'swatch_cart_error', 'Failed to create swatch-only cart: ' . $e->getMessage(), [ 'status' => 500 ] );
+			}
 		}
 	}
 }

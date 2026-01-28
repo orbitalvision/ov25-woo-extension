@@ -165,24 +165,27 @@ async function createSwatchOnlyCart(swatches: Swatch[], rules: SwatchRulesData):
       timestamp: Date.now()
     };
 
-    const response = await fetch(window.location.origin + '/wp-admin/admin-ajax.php', {
+    // Use REST API endpoint - handle both pretty and plain permalinks
+    const restUrl = (window as any).ov25SwatchesPage?.restBase 
+      ? `${(window as any).ov25SwatchesPage.restBase}ov25/v1/create-swatch-cart`
+      : window.location.origin + '/?rest_route=/ov25/v1/create-swatch-cart';
+    const response = await fetch(restUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: 'action=ov25_create_swatch_cart&swatch_data=' + encodeURIComponent(JSON.stringify(swatchCartData))
+      body: JSON.stringify({
+        swatch_data: JSON.stringify(swatchCartData)
+      })
     });
 
     if (!response.ok) {
-      throw new Error('Network error creating swatch cart');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to create swatch cart: ${response.status}`);
     }
 
     const result = await response.json();
-    if (!result?.success) {
-      throw new Error(result?.data || 'Failed to create swatch cart');
-    }
-
-    const checkoutUrl = result.data?.checkout_url as string | undefined;
+    const checkoutUrl = result.checkout_url as string | undefined;
     if (checkoutUrl) { (window as any).ov25CheckoutUrl = checkoutUrl; }
     return checkoutUrl;
   } catch (error) {

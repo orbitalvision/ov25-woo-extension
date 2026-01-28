@@ -319,10 +319,6 @@ function ov25_woo_extension_init() {
 		// If permalinks are plain, make /swatches redirect to the page_id URL
 		add_action( 'template_redirect', 'ov25_swatches_plain_permalink_redirect' );
 
-		// AJAX handler for creating swatch-only cart
-		add_action( 'wp_ajax_ov25_create_swatch_cart', 'ov25_ajax_create_swatch_cart' );
-		add_action( 'wp_ajax_nopriv_ov25_create_swatch_cart', 'ov25_ajax_create_swatch_cart' );
-
 		// Auto-restore original cart if user navigates away from Checkout (preserve main cart)
 		add_action( 'template_redirect', 'ov25_maybe_restore_original_cart_on_navigation' );
 
@@ -385,6 +381,8 @@ function ov25_woo_extension_init() {
 					'priceSelector' => get_option( 'ov25_price_selector', '' ),
 					'customCSS' => get_option( 'ov25_custom_css', '' ),
 					'swatchProductId' => ov25_get_swatch_product_id(),
+					'restBase' => esc_url_raw( get_rest_url() ),
+					'createSwatchCartUrl' => esc_url_raw( get_rest_url( null, 'ov25/v1/create-swatch-cart' ) ),
 				) );
 				}
 
@@ -747,17 +745,29 @@ function ov25_ensure_swatch_product_exists() {
 	// Check if swatch product already exists
 	$swatch_product_id = get_option( 'ov25_swatch_product_id' );
 	
-	if ( $swatch_product_id && wc_get_product( $swatch_product_id ) ) {
-		return $swatch_product_id;
+	if ( $swatch_product_id ) {
+		$existing_product = wc_get_product( $swatch_product_id );
+		if ( $existing_product ) {
+			// Ensure the product is published and purchasable
+			if ( $existing_product->get_status() !== 'publish' ) {
+				$existing_product->set_status( 'publish' );
+				$existing_product->set_stock_status( 'instock' );
+				$existing_product->set_manage_stock( false );
+				$existing_product->save();
+			}
+			return $swatch_product_id;
+		}
 	}
 	
 	// Create swatch product if it doesn't exist
 	$product = new WC_Product_Simple();
 	$product->set_name( 'Swatch' );
-	$product->set_status( 'private' ); // Hidden from catalog
-	$product->set_catalog_visibility( 'hidden' );
+	$product->set_status( 'publish' ); // Must be published to be purchasable
+	$product->set_catalog_visibility( 'hidden' ); // Hidden from catalog but still purchasable
 	$product->set_price( 0 );
 	$product->set_regular_price( 0 );
+	$product->set_stock_status( 'instock' ); // Ensure it's in stock
+	$product->set_manage_stock( false ); // Don't manage stock
     // Swatches need delivery, so product must not be virtual
     $product->set_virtual( false );
 	$product->set_meta_data( '_ov25_swatch_product', 'yes' );
@@ -905,62 +915,6 @@ function ov25_swatches_plain_permalink_redirect() {
     // If permalink structure is plain, get_permalink will already be ?page_id=...
     wp_safe_redirect( $link, 301 );
     exit;
-}
-
-/**
- * AJAX handler for creating swatch-only cart.
- */
-function ov25_ajax_create_swatch_cart() {
-	try {
-		// Get swatch data from request
-		$swatch_data = isset( $_POST['swatch_data'] ) ? json_decode( wp_unslash( $_POST['swatch_data'] ), true ) : null;
-		
-		if ( ! $swatch_data ) {
-			wp_send_json_error( 'No swatch data provided' );
-			return;
-		}
-
-		// Store current cart contents to restore later
-		$current_cart = WC()->cart->get_cart();
-		WC()->session->set( 'ov25_original_cart', $current_cart );
-		
-		// Clear the main cart
-		WC()->cart->empty_cart();
-		
-        // Add swatches to the empty cart
-        $swatches = $swatch_data['swatches'];
-        $rules = $swatch_data['rules'];
-        // Resolve swatch product id on the server (create if missing)
-        $product_id = ov25_ensure_swatch_product_exists();
-		
-		foreach ( $swatches as $index => $swatch ) {
-			$is_free = $index < $rules['freeSwatchLimit'];
-			$swatch_price = $is_free ? 0 : $rules['pricePerSwatch'];
-			
-			$cart_item_data = array(
-				'swatch_manufacturer_id' => $swatch['manufacturerId'],
-				'swatch_name' => $swatch['name'],
-				'swatch_option' => $swatch['option'],
-				'swatch_total_count' => count( $swatches ),
-				'swatch_price' => $swatch_price,
-				'swatch_sku' => $swatch['sku'],
-				'ov25-thumbnail' => $swatch['thumbnail']['miniThumbnails']['small'],
-			);
-			
-			WC()->cart->add_to_cart( $product_id, 1, 0, array(), $cart_item_data );
-		}
-		
-		// Mark this as a swatch-only cart
-		WC()->session->set( 'ov25_swatch_only_cart', true );
-		
-        // Return the correct checkout URL (respects permalinks/settings)
-        $checkout_url = function_exists( 'wc_get_checkout_url' ) ? wc_get_checkout_url() : home_url( '/checkout/' );
-        wp_send_json_success( array( 'message' => 'Swatch-only cart created successfully', 'checkout_url' => $checkout_url ) );
-		
-	} catch ( Exception $e ) {
-		error_log( 'OV25 Woo Extension: Error creating swatch-only cart - ' . $e->getMessage() );
-		wp_send_json_error( 'Failed to create swatch-only cart: ' . $e->getMessage() );
-	}
 }
 
 /**
