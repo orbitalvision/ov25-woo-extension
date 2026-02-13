@@ -403,6 +403,7 @@ async function createSwatchOnlyCart(swatches: Swatch[], rules: SwatchRulesData):
             window.location.origin + '/?rest_route=/ov25/v1/create-swatch-cart';
         const response = await fetch(restUrl, {
             method: 'POST',
+            credentials: 'same-origin',
             headers: {
                 'Content-Type': 'application/json',
             },

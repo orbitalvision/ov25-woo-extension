@@ -147,6 +147,21 @@ if ( ! class_exists( 'OV25_Swatch_API' ) ) {
 			// Verify WooCommerce is loaded
 			if ( ! class_exists( 'WooCommerce' ) || ! function_exists( 'WC' ) ) {
 				return new WP_Error( 'woocommerce_not_loaded', 'WooCommerce not available', [ 'status' => 500 ] );
+			} 
+			
+			// Initialize WooCommerce session and cart if not already done
+			if ( is_null( WC()->session ) ) {
+				WC()->session = new WC_Session_Handler();
+				WC()->session->init();
+			}
+
+			if ( is_null( WC()->cart ) ) {
+				WC()->cart = new WC_Cart();
+			}
+		
+			// Ensure customer is set
+			if ( is_null( WC()->customer ) ) {
+				WC()->customer = new WC_Customer( get_current_user_id(), true );
 			}
 
 			try {
