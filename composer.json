@@ -11,7 +11,9 @@
 	},
 	"require-dev": {
 		"phpunit/phpunit": "^9.0",
-		"automattic/jetpack-autoloader": "^2"
+		"automattic/jetpack-autoloader": "^2",
+		"php-stubs/wordpress-stubs": "^6.9",
+		"php-stubs/woocommerce-stubs": "^10.5"
 	},
 	"config": {
 		"allow-plugins": {
