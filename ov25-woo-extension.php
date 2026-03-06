@@ -4,7 +4,7 @@
  * Description: Show off your product catalogue in 3D, with the worlds most advanced product configurator. Inifinite variations, infinite possibilities.
  * Version: 0.3.32
  * Author: Orbital Vision
- * Author URI: https://ov25.orbitalvision.com
+ * Author URI: https://ov25.orbital.vision
  * Text Domain: ov25-woo-extension
  * Domain Path: /languages
  * Update URI: https://github.com/orbitalvision/ov25-woo-extension
