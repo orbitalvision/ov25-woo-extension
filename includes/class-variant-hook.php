@@ -57,7 +57,7 @@ class OV25_Variant_Hook {
 
 		if ( get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes' ) {
 			echo '<div data-ov25-variants style="display:none"></div>';
-			echo '<button type="button" class="ov25-configure-button" onclick="window.ov25OpenConfigurator()">CONFIGURE</button>';
+			echo '<div data-ov25-configure-button></div>';
 			return;
 		}
 
@@ -76,7 +76,7 @@ class OV25_Variant_Hook {
 
 		if ( get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes' ) {
 			echo '<div data-ov25-variants style="display:none"></div>';
-			echo '<button type="button" class="ov25-configure-button" onclick="window.ov25OpenConfigurator()">CONFIGURE</button>';
+			echo '<div data-ov25-configure-button></div>';
 			return;
 		}
 
@@ -99,7 +99,7 @@ class OV25_Variant_Hook {
 		}
 
 		if ( get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes' ) {
-			return '<div data-ov25-variants style="display:none"></div><button type="button" class="ov25-configure-button" onclick="window.ov25OpenConfigurator()">CONFIGURE</button>';
+			return '<div data-ov25-variants style="display:none"></div><div data-ov25-configure-button></div>';
 		}
 
 		return '<div data-ov25-variants></div>';
@@ -112,7 +112,7 @@ class OV25_Variant_Hook {
 		}
 
 		if ( get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes' ) {
-			return '<div data-ov25-variants style="display:none"></div><button type="button" class="ov25-configure-button" onclick="window.ov25OpenConfigurator()">CONFIGURE</button>' . $html;
+			return '<div data-ov25-variants style="display:none"></div><div data-ov25-configure-button></div>' . $html;
 		}
 
 		return '<div data-ov25-variants></div>' . $html;

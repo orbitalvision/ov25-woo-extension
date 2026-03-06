@@ -15,6 +15,7 @@ declare global {
             images: string[];
             gallerySelector: string;
             variantsSelector: string;
+            configureButtonSelector: string;
             swatchesSelector: string;
             priceSelector: string;
             customCSS: string;
@@ -164,7 +165,7 @@ OV25.injectConfigurator({
 
 
 
-// Simple configure button: expose open handler and inject green button styles
+// Simple configure button: expose open handler, inject green button into selector target
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.ov25Settings?.useSimpleConfigureButton) return;
 
@@ -172,6 +173,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const el = document.querySelector('[data-ov25-iframe]');
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
+
+    const selector = window.ov25Settings?.configureButtonSelector?.trim() || '[data-ov25-configure-button]';
+    const container = document.querySelector(selector);
+    if (!container) return;
 
     const style = document.createElement('style');
     style.textContent = `
@@ -190,6 +195,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     `;
     document.head.appendChild(style);
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'ov25-configure-button';
+    button.textContent = 'CONFIGURE';
+    button.onclick = () => window.ov25OpenConfigurator?.();
+    container.innerHTML = '';
+    container.appendChild(button);
 });
 
 // CSS + JavaScript trick: Replace add to cart button

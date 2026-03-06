@@ -146,6 +146,15 @@ class WC_Settings_Ov25 extends WC_Settings_Page {
 				'placeholder' => __( '[data-ov25-variants]', 'ov25-woo-extension' ),
 			),
 			array(
+				'title'    => __( 'Configure Button Selector', 'ov25-woo-extension' ),
+				'desc'     => __( 'Custom CSS selector where the CONFIGURE button is placed when "Use Simple Configure Button" is enabled. Default: [data-ov25-configure-button]', 'ov25-woo-extension' ),
+				'id'       => 'ov25_configure_button_selector',
+				'type'     => 'text',
+				'desc_tip' => true,
+				'default'  => '',
+				'placeholder' => __( '[data-ov25-configure-button]', 'ov25-woo-extension' ),
+			),
+			array(
 				'title'    => __( 'Price Selector', 'ov25-woo-extension' ),
 				'desc'     => __( 'Custom CSS selector for the price element. Default: [data-ov25-price]', 'ov25-woo-extension' ),
 				'id'       => 'ov25_price_selector',
