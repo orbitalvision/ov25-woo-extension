@@ -11,6 +11,7 @@ declare global {
             showOptional: boolean;
             hideAr: boolean;
             useInlineVariantControls: boolean;
+            useSimpleConfigureButton: boolean;
             images: string[];
             gallerySelector: string;
             variantsSelector: string;
@@ -22,6 +23,7 @@ declare global {
             createSwatchCartUrl?: string;
         };
         ov25GenerateThumbnail: () => Promise<string>;
+        ov25OpenConfigurator?: () => void;
         wc_price?: (price: number) => string;
         jQuery?: any;
     }
@@ -156,10 +158,39 @@ OV25.injectConfigurator({
     showOptional: window.ov25Settings?.showOptional || false,
     hideAr: window.ov25Settings?.hideAr || false,
     useInlineVariantControls: window.ov25Settings?.useInlineVariantControls || false,
+    useSimpleConfigureButton: window.ov25Settings?.useSimpleConfigureButton || false,
     cssString: window.ov25Settings?.customCSS || '',
 });
 
 
+
+// Simple configure button: expose open handler and inject green button styles
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.ov25Settings?.useSimpleConfigureButton) return;
+
+    window.ov25OpenConfigurator = () => {
+        const el = document.querySelector('[data-ov25-iframe]');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    const style = document.createElement('style');
+    style.textContent = `
+        .ov25-configure-button {
+            background: #22c55e !important;
+            color: #fff !important;
+            border: none;
+            padding: 0.6em 1.2em;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .ov25-configure-button:hover {
+            background: #16a34a !important;
+        }
+    `;
+    document.head.appendChild(style);
+});
 
 // CSS + JavaScript trick: Replace add to cart button
 document.addEventListener('DOMContentLoaded', () => {

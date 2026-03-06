@@ -100,6 +100,14 @@ class WC_Settings_Ov25 extends WC_Settings_Page {
 			'default'  => 'no',
 		),
 		array(
+			'title'    => __( 'Use Simple Configure Button', 'ov25-woo-extension' ),
+			'desc'     => __( 'Show a single CONFIGURE button instead of variant controls.', 'ov25-woo-extension' ),
+			'id'       => 'ov25_use_simple_configure_button',
+			'type'     => 'checkbox',
+			'desc_tip' => true,
+			'default'  => 'no',
+		),
+		array(
 			'title'    => __( 'Custom CSS', 'ov25-woo-extension' ),
 				'desc'     => __( 'Add custom CSS that will be applied only on OV25 product pages. Use this to customize the appearance of the 3D configurator and product page elements.', 'ov25-woo-extension' ),
 				'id'       => 'ov25_custom_css',

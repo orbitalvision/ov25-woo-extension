@@ -55,6 +55,12 @@ class OV25_Variant_Hook {
 			return;
 		}
 
+		if ( get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes' ) {
+			echo '<div data-ov25-variants style="display:none"></div>';
+			echo '<button type="button" class="ov25-configure-button" onclick="window.ov25OpenConfigurator()">CONFIGURE</button>';
+			return;
+		}
+
 		echo '<div data-ov25-variants></div>';
 	}
 
@@ -65,6 +71,12 @@ class OV25_Variant_Hook {
 		}
 
 		if ( ! $product->is_type( 'simple' ) ) {
+			return;
+		}
+
+		if ( get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes' ) {
+			echo '<div data-ov25-variants style="display:none"></div>';
+			echo '<button type="button" class="ov25-configure-button" onclick="window.ov25OpenConfigurator()">CONFIGURE</button>';
 			return;
 		}
 
@@ -86,6 +98,10 @@ class OV25_Variant_Hook {
 			return $html;
 		}
 
+		if ( get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes' ) {
+			return '<div data-ov25-variants style="display:none"></div><button type="button" class="ov25-configure-button" onclick="window.ov25OpenConfigurator()">CONFIGURE</button>';
+		}
+
 		return '<div data-ov25-variants></div>';
 	}
 
@@ -93,6 +109,10 @@ class OV25_Variant_Hook {
 		$product = wc_get_product();
 		if ( ! is_product() || ! $product->get_meta( '_ov25_product_id', true ) ) {
 			return $html;
+		}
+
+		if ( get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes' ) {
+			return '<div data-ov25-variants style="display:none"></div><button type="button" class="ov25-configure-button" onclick="window.ov25OpenConfigurator()">CONFIGURE</button>' . $html;
 		}
 
 		return '<div data-ov25-variants></div>' . $html;
