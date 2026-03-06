@@ -10,6 +10,7 @@ declare global {
             deferThreeD: boolean;
             showOptional: boolean;
             hideAr: boolean;
+            useInlineVariantControls: boolean;
             images: string[];
             gallerySelector: string;
             variantsSelector: string;
@@ -154,6 +155,7 @@ OV25.injectConfigurator({
     deferThreeD: window.ov25Settings?.deferThreeD || false,
     showOptional: window.ov25Settings?.showOptional || false,
     hideAr: window.ov25Settings?.hideAr || false,
+    useInlineVariantControls: window.ov25Settings?.useInlineVariantControls || false,
     cssString: window.ov25Settings?.customCSS || '',
 });
 

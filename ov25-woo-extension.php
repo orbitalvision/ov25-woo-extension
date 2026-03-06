@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OV25
  * Description: Show off your product catalogue in 3D, with the worlds most advanced product configurator. Inifinite variations, infinite possibilities.
- * Version: 0.3.31
+ * Version: 0.3.32
  * Author: Orbital Vision
  * Author URI: https://ov25.orbitalvision.com
  * Text Domain: ov25-woo-extension
@@ -172,7 +172,7 @@ if ( ! class_exists( 'ov25_woo_extension' ) ) :
 		 *
 		 * @var string
 		 */
-		public $version = '0.3.31';
+		public $version = '0.3.32';
 
 		/**
 		 * Constructor.
@@ -374,6 +374,7 @@ function ov25_woo_extension_init() {
 					'deferThreeD' => get_option( 'ov25_defer_3d', 'yes' ) === 'yes',
 					'showOptional' => get_option( 'ov25_show_optional', 'no' ) === 'yes',
 					'hideAr' => get_option( 'ov25_hide_ar', 'no' ) === 'yes',
+					'useInlineVariantControls' => get_option( 'ov25_use_inline_variant_controls', 'no' ) === 'yes',
 					'images' => function_exists( 'wc_get_product' ) ? ov25_get_product_images() : array(),
 					'gallerySelector' => get_option( 'ov25_gallery_selector', '' ),
 					'variantsSelector' => get_option( 'ov25_variants_selector', '' ),

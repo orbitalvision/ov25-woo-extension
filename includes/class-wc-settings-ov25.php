@@ -92,6 +92,14 @@ class WC_Settings_Ov25 extends WC_Settings_Page {
 			'default'  => 'no',
 		),
 		array(
+			'title'    => __( 'Use Inline Variant Controls', 'ov25-woo-extension' ),
+			'desc'     => __( 'Use inline variant controls in the configurator.', 'ov25-woo-extension' ),
+			'id'       => 'ov25_use_inline_variant_controls',
+			'type'     => 'checkbox',
+			'desc_tip' => true,
+			'default'  => 'no',
+		),
+		array(
 			'title'    => __( 'Custom CSS', 'ov25-woo-extension' ),
 				'desc'     => __( 'Add custom CSS that will be applied only on OV25 product pages. Use this to customize the appearance of the 3D configurator and product page elements.', 'ov25-woo-extension' ),
 				'id'       => 'ov25_custom_css',

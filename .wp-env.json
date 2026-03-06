@@ -2,6 +2,9 @@
 	"phpVersion": null,
 	"core": null,
 	"plugins": ["https://downloads.wordpress.org/plugin/woocommerce.zip", "."],
+	"mappings": {
+		"wp-content/plugins/ov25-woo-extension": "."
+	},
 	"config": {
 		"JETPACK_AUTOLOAD_DEV": true,
 		"WP_DEBUG": true,
