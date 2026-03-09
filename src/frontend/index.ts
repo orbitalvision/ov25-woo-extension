@@ -149,6 +149,10 @@ const doInject = () => OV25.injectConfigurator({
     },
     galleryId: {id: window.ov25Settings?.gallerySelector || '.woocommerce-product-gallery', replace: true},
     variantsId: window.ov25Settings?.variantsSelector || '[data-ov25-variants]',
+    ...(window.ov25Settings?.useSimpleConfigureButton && {
+        useSimpleVariantsSelector: true,
+        configureButtonId: { id: window.ov25Settings?.configureButtonSelector?.trim() || '[data-ov25-configure-button]', replace: true },
+    }),
     swatchesId: window.ov25Settings?.swatchesSelector || '[data-ov25-swatches]',
     priceId: window.ov25Settings?.priceSelector || '[data-ov25-price]',
     images: window.ov25Settings?.images || [],
@@ -172,12 +176,6 @@ if (window.ov25Settings?.useSimpleConfigureButton) {
 } else {
     doInject();
 }
-
-// Simple configure button: scroll to configurator. Runs now if DOM ready, else on DOMContentLoaded (script often loads in footer).
-window.ov25OpenConfigurator = () => {
-    const el = document.querySelector('[data-ov25-iframe]');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-};
 
 function runSimpleConfigureButton() {
     if (!window.ov25Settings?.useSimpleConfigureButton) return;
