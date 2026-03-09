@@ -149,9 +149,6 @@ const doInject = () => OV25.injectConfigurator({
     },
     galleryId: {id: window.ov25Settings?.gallerySelector || '.woocommerce-product-gallery', replace: true},
     variantsId: window.ov25Settings?.variantsSelector || '[data-ov25-variants]',
-    ...(window.ov25Settings?.useSimpleConfigureButton && {
-        configureButtonId: { id: window.ov25Settings?.configureButtonSelector?.trim() || '[data-ov25-configure-button]', replace: true },
-    }),
     swatchesId: window.ov25Settings?.swatchesSelector || '[data-ov25-swatches]',
     priceId: window.ov25Settings?.priceSelector || '[data-ov25-price]',
     images: window.ov25Settings?.images || [],
