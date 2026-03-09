@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OV25
  * Description: Show off your product catalogue in 3D, with the worlds most advanced product configurator. Inifinite variations, infinite possibilities.
- * Version: 0.3.40
+ * Version: 0.3.41
  * Author: Orbital Vision
  * Author URI: https://ov25.orbital.vision
  * Text Domain: ov25-woo-extension
@@ -106,6 +106,9 @@ if ( file_exists( $puc_file ) ) {
 
 			// GitHub API requires a User-Agent; missing/invalid one can cause 403 even when not rate-limited.
 			add_filter( 'puc_request_info_options-ov25-woo-extension', function ( $options ) {
+				if ( ! is_array( $options ) ) {
+					return $options;
+				}
 				$headers = isset( $options['headers'] ) && is_array( $options['headers'] ) ? $options['headers'] : array();
 				$options['headers'] = array_merge( $headers, array(
 					'User-Agent' => 'OV25-WooExtension-UpdateCheck (WordPress)',
@@ -199,7 +202,7 @@ if ( ! class_exists( 'ov25_woo_extension' ) ) :
 		 *
 		 * @var string
 		 */
-		public $version = '0.3.40';
+		public $version = '0.3.41';
 
 		/**
 		 * Constructor.

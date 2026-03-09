@@ -39,35 +39,31 @@ npm run update-ui-pack
 
 
 ```bash
-# 1. Bump version (updates version.json, ov25-woo-extension.php, package.json)
-npm run bump-version patch   # or minor, major, or explicit: 0.4.0
+# Release (bumps version, builds, zips, commits, tags, pushes)
+npm run release:patch   # or release:minor, release:major
+```
 
-npm i
-# 2. Build and zip with correct versions
+Or manually:
+```bash
+npm run bump-version patch
 npm run build
 npm run zip
-
-# 3. Push new ZIP to GitHub
 git add .
-git commit -m {message}
-git push -u origin main
-
-# 4. Release
-npm run release:patch   # or release:minor, release:major
+git commit -m "Release X.X.X"
+# then create tag and push
 ```
 
 ## 📋 What Happens Automatically
 
 ### **Prerequisites:**
-- ✅ Run `npm run bump-version patch` (or minor/major) to update `version.json`, `ov25-woo-extension.php`, and `package.json`
-- ✅ `ov25-woo-extension.zip` must exist with correct versions
+- ✅ Clean git working directory (commit your changes first)
 
 ### **Release Command Steps:**
-1. ✅ **Verifies** zip file exists
-2. ✅ **Updates** version in `package.json` only (for npm consistency)
-3. ✅ **Commits** package.json + existing zip file to git
-4. ✅ **Creates** version tag (e.g., `v0.2.0`)
-5. ✅ **Pushes** everything to GitHub
+1. ✅ **Runs** `bump-version` (updates version.json, ov25-woo-extension.php, package.json)
+2. ✅ **Builds** and creates zip with new version
+3. ✅ **Commits** version.json + ov25-woo-extension.php + package.json + zip
+4. ✅ **Creates** version tag (e.g., `v0.3.42`)
+5. ✅ **Pushes** to GitHub
 
 ### **GitHub Actions:**
 6. ✅ **Verifies** zip file exists in repo
@@ -82,14 +78,7 @@ npm run release:patch   # or release:minor, release:major
 git add .
 git commit -m "Add new feature"
 
-# 2. Bump version (syncs version.json → ov25-woo-extension.php + package.json)
-npm run bump-version patch   # or minor, major, or 0.4.0
-
-# 3. Build and zip
-npm run build
-npm run zip
-
-# 4. Release
+# 2. Release (bumps, builds, zips, commits, tags, pushes)
 npm run release:patch
 
 # Done! ✨
