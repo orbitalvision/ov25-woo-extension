@@ -22,6 +22,12 @@ wp-env start
 
 Visit the added page at http://localhost:8888/wp-admin/admin.php?page=wc-admin&path=%2Fexample.
 
+## Update checks
+
+The plugin checks GitHub for updates. No token is required: the plugin works without one. Without a token, GitHub’s API rate limit can cause “update check temporarily unavailable”; you can then install updates from the [releases](https://github.com/orbitalvision/ov25-woo-extension/releases) page.
+
+Optional: to avoid rate limits on your server, copy `github-token.example.php` to `github-token.php`, add a [GitHub token](https://github.com/settings/tokens) with `public_repo`, and keep `github-token.php` out of version control (it is gitignored).
+
 ## React 18 Compatibility
 
 This extension includes React 18 compatibility utilities in `src/utils/react-compat.js`. When rendering React components, use the `renderCompatible` function instead of directly using `ReactDOM.render` or `createRoot`:

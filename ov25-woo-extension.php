@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OV25
  * Description: Show off your product catalogue in 3D, with the worlds most advanced product configurator. Inifinite variations, infinite possibilities.
- * Version: 0.3.38
+ * Version: 0.3.39
  * Author: Orbital Vision
  * Author URI: https://ov25.orbital.vision
  * Text Domain: ov25-woo-extension
@@ -103,6 +103,17 @@ if ( file_exists( $puc_file ) ) {
 				'ov25-woo-extension'
 			);
             $ov25UpdateChecker->getVcsApi()->enableReleaseAssets('/ov25-woo-extension\.zip($|[?&#])/i');
+
+			// GitHub API requires a User-Agent; missing/invalid one can cause 403 even when not rate-limited.
+			add_filter( 'puc_request_info_options-ov25-woo-extension', function ( $options ) {
+				$headers = isset( $options['headers'] ) && is_array( $options['headers'] ) ? $options['headers'] : array();
+				$options['headers'] = array_merge( $headers, array(
+					'User-Agent' => 'OV25-WooExtension-UpdateCheck (WordPress)',
+					'Accept'      => 'application/vnd.github.v3+json',
+				) );
+				return $options;
+			} );
+
 			// Load GitHub token securely (only if file exists and not in production)
 			$token_file = dirname( __FILE__ ) . '/github-token.php';
 			if ( file_exists( $token_file ) ) {
@@ -114,6 +125,22 @@ if ( file_exists( $puc_file ) ) {
 				} catch ( Exception $e ) {
 					error_log( 'OV25 Woo Extension: Error loading GitHub token - ' . $e->getMessage() );
 				}
+			}
+
+			// Public plugin: without a token, GitHub often returns 403 (rate limit). Show a soft message instead of API errors.
+			if ( ! file_exists( $token_file ) ) {
+				add_filter( 'puc_manual_check_message-ov25-woo-extension', function ( $message, $status ) {
+					if ( $status !== 'error' ) {
+						return $message;
+					}
+					$url = 'https://github.com/orbitalvision/ov25-woo-extension/releases/latest';
+					return sprintf(
+						/* translators: 1: opening link tag, 2: closing link tag */
+						__( 'Update check is temporarily unavailable. You can download the latest release from %1$sthe plugin\'s GitHub releases page%2$s.', 'ov25-woo-extension' ),
+						'<a href="' . esc_url( $url ) . '" target="_blank" rel="noopener noreferrer">',
+						'</a>'
+					);
+				}, 10, 2 );
 			}
 		}
 	} catch ( Exception $e ) {
@@ -172,7 +199,7 @@ if ( ! class_exists( 'ov25_woo_extension' ) ) :
 		 *
 		 * @var string
 		 */
-		public $version = '0.3.38';
+		public $version = '0.3.39';
 
 		/**
 		 * Constructor.

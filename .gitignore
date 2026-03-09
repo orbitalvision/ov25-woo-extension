@@ -33,6 +33,7 @@ config/tokens.php
 github-token.php
 **/tokens/**
 **/*token*
+!github-token.example.php
 **/*secret*
 **/*credential*
 

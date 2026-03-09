@@ -43,7 +43,7 @@ npm run update-ui-pack
 # - Update "Version: X.X.X" in ov25-woo-extension.php header
 # - Update "public $version = 'X.X.X';" in ov25-woo-extension.php class
 
-npm i --legacy-peer-deps
+npm i
 # 2. Build and zip with correct versions
 npm run build
 npm run zip
