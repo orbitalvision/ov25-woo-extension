@@ -1,6 +1,6 @@
 {
 	"name": "ov25-woo-extension",
-	"version": "0.3.37",
+	"version": "0.3.40",
 	"author": "The WordPress Contributors",
 	"license": "GPL-3.0+",
 	"main": "build/index.js",
@@ -38,7 +38,8 @@
 		"release:minor": "npm run release -- minor",
 		"release:major": "npm run release -- major",
 		"release": "node scripts/create-release.js",
-		"update-ui-pack": "node scripts/update-ui-pack.js"
+		"update-ui-pack": "node scripts/update-ui-pack.js",
+		"bump-version": "node scripts/bump-version.js"
 	},
 	"dependencies": {
 		"@woocommerce/components": "^10.3.0",

@@ -39,29 +39,27 @@ npm run update-ui-pack
 
 
 ```bash
-# 1. Update versions manually in both places
-# - Update "Version: X.X.X" in ov25-woo-extension.php header
-# - Update "public $version = 'X.X.X';" in ov25-woo-extension.php class
+# 1. Bump version (updates version.json, ov25-woo-extension.php, package.json)
+npm run bump-version patch   # or minor, major, or explicit: 0.4.0
 
 npm i
 # 2. Build and zip with correct versions
 npm run build
 npm run zip
 
-# 3. Push new ZIP to git hub
+# 3. Push new ZIP to GitHub
 git add .
-git commmit -m {message}
+git commit -m {message}
 git push -u origin main
 
-# 4. Release (only updates package.json for npm consistency)
+# 4. Release
 npm run release:patch   # or release:minor, release:major
-
 ```
 
 ## 📋 What Happens Automatically
 
 ### **Prerequisites:**
-- ✅ **Manually update** both versions in `ov25-woo-extension.php`
+- ✅ Run `npm run bump-version patch` (or minor/major) to update `version.json`, `ov25-woo-extension.php`, and `package.json`
 - ✅ `ov25-woo-extension.zip` must exist with correct versions
 
 ### **Release Command Steps:**
@@ -84,19 +82,25 @@ npm run release:patch   # or release:minor, release:major
 git add .
 git commit -m "Add new feature"
 
-# 2. Manually update BOTH versions in ov25-woo-extension.php:
-#    - Header: Version: 0.1.8
-#    - Class:  public $version = '0.1.8';
+# 2. Bump version (syncs version.json → ov25-woo-extension.php + package.json)
+npm run bump-version patch   # or minor, major, or 0.4.0
 
-# 3. Build with correct versions
+# 3. Build and zip
 npm run build
-npm run plugin-zip
+npm run zip
 
-# 4. Release (auto-detects version from package.json bump)
+# 4. Release
 npm run release:patch
 
 # Done! ✨
 ```
+
+### **bump-version usage**
+- `npm run bump-version patch` — 0.3.39 → 0.3.40
+- `npm run bump-version minor` — 0.3.39 → 0.4.0
+- `npm run bump-version major` — 0.3.39 → 1.0.0
+- `npm run bump-version 0.5.0` — set explicit version
+- `npm run bump-version` or `npm run bump-version sync` — sync from version.json to PHP + package.json
 
 ## 📦 What Gets Released
 
@@ -119,7 +123,7 @@ The zip file is built **separately** and includes:
 
 **If release fails:**
 1. Ensure clean git working directory (`git status`)
-2. Check that `ov25-woo-extension.zip` exists (`npm run plugin-zip` if missing)
+2. Check that `ov25-woo-extension.zip` exists (`npm run zip` if missing)
 3. Check you have push permissions to repo
 4. Verify GitHub Actions logs
 
