@@ -159,16 +159,53 @@ OV25.injectConfigurator({
     showOptional: window.ov25Settings?.showOptional || false,
     hideAr: window.ov25Settings?.hideAr || false,
     useInlineVariantControls: window.ov25Settings?.useInlineVariantControls || false,
-    ...(window.ov25Settings?.useSimpleConfigureButton && {
-        configureButtonId: {
-            id: window.ov25Settings?.configureButtonSelector?.trim() || '[data-ov25-configure-button]',
-            replace: true,
-        },
-    }),
     cssString: window.ov25Settings?.customCSS || '',
 });
 
+// Simple configure button: scroll to configurator. Runs now if DOM ready, else on DOMContentLoaded (script often loads in footer).
+window.ov25OpenConfigurator = () => {
+    const el = document.querySelector('[data-ov25-iframe]');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
+function runSimpleConfigureButton() {
+    if (!window.ov25Settings?.useSimpleConfigureButton) return;
+    const selector = window.ov25Settings?.configureButtonSelector?.trim() || '[data-ov25-configure-button]';
+    const container = document.querySelector(selector);
+    if (!container) return;
+
+    const style = document.createElement('style');
+    style.textContent = `
+        .ov25-configure-button {
+            background: #22c55e !important;
+            color: #fff !important;
+            border: none;
+            padding: 0.6em 1.2em;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .ov25-configure-button:hover {
+            background: #16a34a !important;
+        }
+    `;
+    document.head.appendChild(style);
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'ov25-configure-button';
+    button.textContent = 'CONFIGURE';
+    button.onclick = () => window.ov25OpenConfigurator?.();
+    container.innerHTML = '';
+    container.appendChild(button);
+}
+
+if (document.readyState !== 'loading') {
+    runSimpleConfigureButton();
+} else {
+    document.addEventListener('DOMContentLoaded', runSimpleConfigureButton);
+}
 
 // CSS + JavaScript trick: Replace add to cart button
 document.addEventListener('DOMContentLoaded', () => {
