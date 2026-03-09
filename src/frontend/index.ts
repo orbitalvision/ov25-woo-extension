@@ -75,7 +75,7 @@ export type SwatchRulesData = {
   enabled: boolean; 
 }
 
-OV25.injectConfigurator({
+const doInject = () => OV25.injectConfigurator({
     apiKey: () => {
         const element = document.querySelector('[data-ov25-iframe]');
         if (!element) return '';
@@ -162,6 +162,17 @@ OV25.injectConfigurator({
     cssString: window.ov25Settings?.customCSS || '',
 });
 
+// When useSimpleConfigureButton: defer inject until DOM ready so [data-ov25-variants] exists (avoids early return)
+if (window.ov25Settings?.useSimpleConfigureButton) {
+    if (document.readyState !== 'loading') {
+        doInject();
+    } else {
+        document.addEventListener('DOMContentLoaded', () => doInject());
+    }
+} else {
+    doInject();
+}
+
 // Simple configure button: scroll to configurator. Runs now if DOM ready, else on DOMContentLoaded (script often loads in footer).
 window.ov25OpenConfigurator = () => {
     const el = document.querySelector('[data-ov25-iframe]');
@@ -175,6 +186,7 @@ function runSimpleConfigureButton() {
     if (!container) return;
 
     const style = document.createElement('style');
+    style.setAttribute('data-ov25-configure-button-styles', '');
     style.textContent = `
         .ov25-configure-button {
             background: #22c55e !important;
@@ -191,6 +203,14 @@ function runSimpleConfigureButton() {
         }
     `;
     document.head.appendChild(style);
+
+    const customCSS = (window.ov25Settings?.customCSS || '').trim();
+    if (customCSS) {
+        const customStyle = document.createElement('style');
+        customStyle.setAttribute('data-ov25-custom-css', '');
+        customStyle.textContent = customCSS;
+        document.head.appendChild(customStyle);
+    }
 
     const button = document.createElement('button');
     button.type = 'button';
