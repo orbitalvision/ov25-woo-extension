@@ -171,7 +171,7 @@ OV25.injectConfigurator({
 
 
 // CSS + JavaScript trick: Replace add to cart button
-
+document.addEventListener('DOMContentLoaded', () => {
     const ov25Element = document.querySelector('[data-ov25-iframe]');
     if (!ov25Element) return; // Not an OV25 product, skip
 
