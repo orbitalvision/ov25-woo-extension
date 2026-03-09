@@ -151,6 +151,8 @@ if ( file_exists( $puc_file ) ) {
 	}
 }
 
+require_once dirname( __FILE__ ) . '/includes/ov25-github-release-fallback.php';
+
 // phpcs:disable WordPress.Files.FileName
 
 /**
