@@ -90,6 +90,10 @@ if ( ! defined( 'MAIN_PLUGIN_FILE' ) ) {
 	define( 'MAIN_PLUGIN_FILE', __FILE__ );
 }
 
+if ( ! defined( 'OV25_VERSION' ) ) {
+	define( 'OV25_VERSION', '0.3.47' );
+}
+
 // Load Plugin Update Checker directly
 $puc_file = dirname( __FILE__ ) . '/includes/plugin-update-checker/plugin-update-checker.php';
 if ( file_exists( $puc_file ) ) {
@@ -280,6 +284,26 @@ function ov25_woo_extension_init() {
 		
 		// Add settings tab
 		add_filter( 'woocommerce_get_settings_pages', 'ov25_woo_extension_add_settings' );
+
+		// Load admin page and REST API
+		$admin_page_file = dirname( __FILE__ ) . '/includes/class-admin-page.php';
+		if ( file_exists( $admin_page_file ) ) {
+			include_once $admin_page_file;
+			if ( class_exists( 'OV25_Admin_Page' ) ) {
+				OV25_Admin_Page::init();
+			}
+		}
+
+		$admin_api_file = dirname( __FILE__ ) . '/includes/class-admin-api.php';
+		if ( file_exists( $admin_api_file ) ) {
+			include_once $admin_api_file;
+			if ( class_exists( 'OV25_Admin_API' ) ) {
+				OV25_Admin_API::init();
+			}
+		}
+
+		// One-time migration from legacy individual options to JSON config
+		ov25_maybe_migrate_legacy_config();
 		
 		// Load product field with error handling
 		$product_field_file = dirname( __FILE__ ) . '/includes/class-product-field.php';
@@ -398,8 +422,10 @@ function ov25_woo_extension_init() {
 						true
 					);
 
-				// Pass OV25 settings to frontend
+				$use_custom = $product->get_meta( '_ov25_use_custom_config', true );
+
 				wp_localize_script( 'ov25-frontend', 'ov25Settings', array(
+					// Legacy flat settings (kept for backward compat during transition)
 					'logoURL' => get_option( 'ov25_logo_url', '' ),
 					'mobileLogoURL' => get_option( 'ov25_mobile_logo_url', '' ),
 					'autoCarousel' => get_option( 'ov25_auto_carousel', 'no' ) === 'yes',
@@ -418,6 +444,12 @@ function ov25_woo_extension_init() {
 					'swatchProductId' => ov25_get_swatch_product_id(),
 					'restBase' => esc_url_raw( get_rest_url() ),
 					'createSwatchCartUrl' => esc_url_raw( get_rest_url( null, 'ov25/v1/create-swatch-cart' ) ),
+					// New JSON config fields
+					'configuratorConfig' => json_decode( get_option( 'ov25_configurator_config', '{}' ), true ),
+					'productConfig' => ( $use_custom === 'yes' )
+						? json_decode( $product->get_meta( '_ov25_configurator_config', true ) ?: '{}', true )
+						: null,
+					'useCustomConfig' => $use_custom === 'yes',
 				) );
 				}
 
@@ -985,6 +1017,78 @@ function ov25_maybe_restore_original_cart_on_navigation() {
     }
     WC()->session->set( 'ov25_swatch_only_cart', false );
     WC()->session->set( 'ov25_original_cart', null );
+}
+
+/**
+ * Migrate legacy individual wp_options to the new JSON config format.
+ * Runs once per plugin update; old options are kept for backward compat.
+ */
+function ov25_maybe_migrate_legacy_config() {
+	$migrated = get_option( 'ov25_config_migrated', 'no' );
+	if ( $migrated === 'yes' ) {
+		return;
+	}
+
+	$existing = get_option( 'ov25_configurator_config', '' );
+	if ( ! empty( $existing ) && $existing !== '{}' ) {
+		update_option( 'ov25_config_migrated', 'yes' );
+		return;
+	}
+
+	$gallery_sel   = get_option( 'ov25_gallery_selector', '' );
+	$variants_sel  = get_option( 'ov25_variants_selector', '' );
+	$price_sel     = get_option( 'ov25_price_selector', '' );
+	$swatches_sel  = get_option( 'ov25_swatches_selector', '' );
+	$configure_sel = get_option( 'ov25_configure_button_selector', '' );
+
+	$standard = array(
+		'selectors' => array(),
+		'carousel'  => array(
+			'desktop' => get_option( 'ov25_auto_carousel', 'no' ) === 'yes' ? 'carousel' : 'stacked',
+			'mobile'  => 'carousel',
+		),
+		'configurator' => array(
+			'displayMode' => array(
+				'desktop' => get_option( 'ov25_use_inline_variant_controls', 'no' ) === 'yes' ? 'inline' : 'sheet',
+				'mobile'  => 'drawer',
+			),
+		),
+		'flags' => array(
+			'deferThreeD' => get_option( 'ov25_defer_3d', 'yes' ) === 'yes',
+			'showOptional' => get_option( 'ov25_show_optional', 'no' ) === 'yes',
+			'hideAr' => get_option( 'ov25_hide_ar', 'no' ) === 'yes',
+		),
+	);
+
+	if ( $gallery_sel ) {
+		$standard['selectors']['gallery'] = array( 'selector' => $gallery_sel, 'replace' => true );
+	}
+	if ( $variants_sel ) {
+		$standard['selectors']['variants'] = $variants_sel;
+	}
+	if ( $price_sel ) {
+		$standard['selectors']['price'] = $price_sel;
+	}
+	if ( $swatches_sel ) {
+		$standard['selectors']['swatches'] = $swatches_sel;
+	}
+	if ( $configure_sel ) {
+		$standard['selectors']['configureButton'] = array( 'selector' => $configure_sel, 'replace' => true );
+	}
+
+	$logo_url = get_option( 'ov25_logo_url', '' );
+	$mobile_logo = get_option( 'ov25_mobile_logo_url', '' );
+	$custom_css = get_option( 'ov25_custom_css', '' );
+	if ( $logo_url || $mobile_logo || $custom_css ) {
+		$standard['branding'] = array();
+		if ( $logo_url ) $standard['branding']['logoURL'] = $logo_url;
+		if ( $mobile_logo ) $standard['branding']['mobileLogoURL'] = $mobile_logo;
+		if ( $custom_css ) $standard['branding']['cssString'] = $custom_css;
+	}
+
+	$config = array( 'standard' => $standard, 'snap2' => $standard );
+	update_option( 'ov25_configurator_config', wp_json_encode( $config ) );
+	update_option( 'ov25_config_migrated', 'yes' );
 }
 
 /**

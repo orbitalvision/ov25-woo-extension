@@ -1,0 +1,102 @@
+.ov25-admin {
+  max-width: 1200px;
+}
+
+.ov25-admin-content {
+  margin-top: 24px;
+}
+
+.ov25-gradient {
+  background: linear-gradient(90deg, #26e8fe 0%, #808aff 50%, #a41efe 100%);
+}
+
+.ov25-tab-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.ov25-tab-btn {
+  padding: 8px 16px;
+  border: 1px solid #c3c4c7;
+  background: #f6f7f7;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ov25-tab-btn--active {
+  background: #2271b1;
+  color: #fff;
+  border-color: #2271b1;
+}
+
+.ov25-page h2 {
+  margin-top: 0;
+}
+
+.ov25-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.ov25-card {
+  padding: 16px;
+  border: 1px solid #c3c4c7;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.ov25-status--ok {
+  color: #00a32a;
+}
+
+.ov25-status--warn {
+  color: #dba617;
+}
+
+.ov25-error {
+  padding: 12px;
+  background: #fcf0f1;
+  border-left: 4px solid #d63638;
+  margin-bottom: 16px;
+}
+
+.ov25-success {
+  padding: 12px;
+  background: #edfaef;
+  border-left: 4px solid #00a32a;
+  margin-bottom: 16px;
+}
+
+.ov25-info {
+  margin-bottom: 16px;
+}
+
+.ov25-form {
+  max-width: 600px;
+}
+
+.ov25-field {
+  margin-bottom: 16px;
+}
+
+.ov25-field label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.ov25-field input[type="text"],
+.ov25-field input[type="password"],
+.ov25-field textarea {
+  width: 100%;
+  max-width: 100%;
+}
+
+.ov25-field--checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+}

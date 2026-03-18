@@ -1,9 +1,9 @@
 import * as OV25 from 'ov25-ui-react18';
 
-// Declare global variables for TypeScript
 declare global {
-        interface Window {
+    interface Window {
         ov25Settings: {
+            // Legacy flat settings
             logoURL: string;
             mobileLogoURL: string;
             autoCarousel: boolean;
@@ -22,157 +22,237 @@ declare global {
             swatchProductId?: string;
             restBase?: string;
             createSwatchCartUrl?: string;
+            // New JSON config
+            configuratorConfig?: Record<string, SerializableInjectConfig>;
+            productConfig?: Record<string, SerializableInjectConfig> | null;
+            useCustomConfig?: boolean;
         };
         ov25GenerateThumbnail: () => Promise<string>;
         ov25OpenConfigurator?: () => void;
-        wc_price?: (price: number) => string;
-        jQuery?: any;
     }
+}
+
+interface SerializableInjectConfig {
+    selectors?: Record<string, string | { selector: string; replace: boolean }>;
+    carousel?: { desktop: string; mobile: string; maxImages?: number | { desktop: number; mobile: number } };
+    configurator?: {
+        displayMode: { desktop: string; mobile: string };
+        triggerStyle?: { desktop: string; mobile: string };
+        variants?: { displayMode: { desktop: string; mobile: string }; useSimpleVariantsSelector?: boolean };
+    };
+    flags?: Record<string, boolean>;
+    branding?: { logoURL?: string; mobileLogoURL?: string; cssString?: string };
+    [key: string]: unknown;
 }
 
 interface PricePayload {
-  formattedPrice: string;
-  formattedSubtotal: string;
-
-  totalPrice: number;
-  subtotal: number;
-  
-  discount: {
-    amount: number,
-    formattedAmount: string,
-    percentage: number
-  }
-  [key: string]: any;
+    formattedPrice: string;
+    formattedSubtotal: string;
+    totalPrice: number;
+    subtotal: number;
+    discount: { amount: number; formattedAmount: string; percentage: number };
+    [key: string]: unknown;
 }
 
 interface SkuPayload {
-  skuString: string;
-  [key: string]: any;
+    skuString: string;
+    skuMap?: Record<string, string>;
+    [key: string]: unknown;
 }
 
 export interface Swatch {
-  name: string;
-  option: string;
-  manufacturerId: string;
-  description: string;
-  thumbnail: {
-    blurHash: string;
-    thumbnail: string;
-    miniThumbnails: {
-      large: string;
-      medium: string;
-      small: string;
-    }
-  };
+    name: string;
+    option: string;
+    manufacturerId: string;
+    description: string;
+    thumbnail: {
+        blurHash: string;
+        thumbnail: string;
+        miniThumbnails: { large: string; medium: string; small: string };
+    };
 }
 
 export type SwatchRulesData = {
-  freeSwatchLimit: number; 
-  canExeedFreeLimit: boolean;
-  pricePerSwatch: number; 
-  minSwatches: number;
-  maxSwatches: number;
-  enabled: boolean; 
+    freeSwatchLimit: number;
+    canExeedFreeLimit: boolean;
+    pricePerSwatch: number;
+    minSwatches: number;
+    maxSwatches: number;
+    enabled: boolean;
+};
+
+/**
+ * Deep merge source into target. Arrays are replaced, not merged.
+ */
+function deepMerge<T extends Record<string, unknown>>(target: T, source: Partial<T>): T {
+    const result = { ...target };
+    for (const key of Object.keys(source) as (keyof T)[]) {
+        const srcVal = source[key];
+        const tgtVal = target[key];
+        if (srcVal && typeof srcVal === 'object' && !Array.isArray(srcVal) && tgtVal && typeof tgtVal === 'object' && !Array.isArray(tgtVal)) {
+            (result as Record<string, unknown>)[key as string] = deepMerge(tgtVal as Record<string, unknown>, srcVal as Record<string, unknown>);
+        } else if (srcVal !== undefined) {
+            (result as Record<string, unknown>)[key as string] = srcVal;
+        }
+    }
+    return result;
 }
 
-const doInject = () => OV25.injectConfigurator({
-    apiKey: () => {
-        const element = document.querySelector('[data-ov25-iframe]');
-        if (!element) return '';
-        const data = element.getAttribute('data-ov25-iframe');
-        return data ? data.split('/')[0] : '';
-    },
-    productLink: () => {
-        const element = document.querySelector('[data-ov25-iframe]');
-        if (!element) return '';
-        const data = element.getAttribute('data-ov25-iframe');
-        if (!data) return '';
-        
-        // Split only on the first forward slash to separate API key from the rest of the path
-        const firstSlashIndex = data.indexOf('/');
-        return firstSlashIndex !== -1 ? data.substring(firstSlashIndex + 1) : '';
-    },
-    addToBasketFunction: async () => {
-        const form = document.querySelector('form.cart');
-        if (!form) return;
+/**
+ * Determine layout type from product link string.
+ */
+function getLayoutType(productLink: string): 'snap2' | 'standard' {
+    return productLink.startsWith('snap2/') ? 'snap2' : 'standard';
+}
 
-        try {
-            // Generate thumbnail
-            const screenshotUrl = await window.ov25GenerateThumbnail();
-            
-            // Add thumbnail URL to form
-            const ensureField = (name: string): HTMLInputElement => {
-                let field = form.querySelector(`input[name="${name}"]`) as HTMLInputElement | null;
-                if (!field) {
-                    field = Object.assign(document.createElement('input'), {
-                        type: 'hidden',
-                        name,
-                    }) as HTMLInputElement;
-                    form.appendChild(field);
-                }
-                return field;
-            };
+/**
+ * Build inject config from the new JSON config, falling back to legacy flat settings.
+ */
+function buildConfig(): Record<string, unknown> {
+    const s = window.ov25Settings;
+    if (!s) return {};
 
-            ensureField('ov25-thumbnail').value = screenshotUrl;
-            // Submit the form
-            const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
-            if (submitButton) {
-                submitButton.click();
-            }
-        } catch (error) {
-            console.error('Failed to generate thumbnail:', error);
-            // Still submit the form even if thumbnail generation fails
-            const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
-            if (submitButton) {
-                submitButton.click();
+    const element = document.querySelector('[data-ov25-iframe]');
+    if (!element) return {};
+
+    const data = element.getAttribute('data-ov25-iframe') || '';
+    const firstSlash = data.indexOf('/');
+    const apiKey = firstSlash !== -1 ? data.substring(0, firstSlash) : data;
+    const productLink = firstSlash !== -1 ? data.substring(firstSlash + 1) : '';
+
+    const hasJsonConfig = s.configuratorConfig && Object.keys(s.configuratorConfig).length > 0;
+
+    if (hasJsonConfig && s.configuratorConfig) {
+        const layoutType = getLayoutType(productLink);
+        let config = s.configuratorConfig[layoutType] || s.configuratorConfig['standard'] || {};
+
+        if (s.useCustomConfig && s.productConfig) {
+            const productOverride = s.productConfig[layoutType] || s.productConfig['standard'];
+            if (productOverride) {
+                config = deepMerge(config as Record<string, unknown>, productOverride as Record<string, unknown>) as SerializableInjectConfig;
             }
         }
-    },
-    addSwatchesToCartFunction: async (swatches: Swatch[], rules: SwatchRulesData) => {
-        if (!swatches.length || !rules.enabled) {
-            return;
-        }
 
-        // Calculate pricing based on rules
-        const totalSwatches = swatches.length;
-        const freeSwatches = Math.min(rules.freeSwatchLimit, totalSwatches);
-        const paidSwatches = Math.max(0, totalSwatches - freeSwatches);
-
-        try {
-            // Store current cart, create a swatch-only cart and redirect to normal checkout
-            const checkoutUrl = await createSwatchOnlyCart(swatches, rules);
-            const redirectUrl = checkoutUrl || (window as any).ov25CheckoutUrl || window.location.origin + '/checkout/';
-            window.location.href = redirectUrl;
-        } catch (error) {
-            console.error('Failed to create swatch cart:', error);
-        }
-    },
-    galleryId: {id: window.ov25Settings?.gallerySelector || '.woocommerce-product-gallery', replace: true},
-    variantsId: window.ov25Settings?.variantsSelector || '[data-ov25-variants]',
-    ...(window.ov25Settings?.useSimpleConfigureButton && {
-        useSimpleVariantsSelector: true,
-        configureButtonId: { id: window.ov25Settings?.configureButtonSelector?.trim() || '[data-ov25-configure-button]', replace: true },
-    }),
-    swatchesId: window.ov25Settings?.swatchesSelector || '[data-ov25-swatches]',
-    priceId: window.ov25Settings?.priceSelector || '[data-ov25-price]',
-    images: window.ov25Settings?.images || [],
-    logoURL: window.ov25Settings?.logoURL || '',
-    mobileLogoURL: window.ov25Settings?.mobileLogoURL !== '' && window.ov25Settings?.mobileLogoURL !== undefined ? window.ov25Settings?.mobileLogoURL : undefined,
-    carouselId: window.ov25Settings?.autoCarousel ? true : false,
-    deferThreeD: window.ov25Settings?.deferThreeD || false,
-    showOptional: window.ov25Settings?.showOptional || false,
-    hideAr: window.ov25Settings?.hideAr || false,
-    useInlineVariantControls: window.ov25Settings?.useInlineVariantControls || false,
-    cssString: window.ov25Settings?.customCSS || '',
-});
-
-// When useSimpleConfigureButton: defer inject until DOM ready so [data-ov25-variants] exists (avoids early return)
-if (window.ov25Settings?.useSimpleConfigureButton) {
-    if (document.readyState !== 'loading') {
-        doInject();
-    } else {
-        document.addEventListener('DOMContentLoaded', () => doInject());
+        return {
+            apiKey,
+            productLink,
+            images: s.images || [],
+            ...buildInjectFromSerializable(config),
+        };
     }
+
+    // Legacy flat config fallback
+    return {
+        apiKey,
+        productLink,
+        gallerySelector: { id: s.gallerySelector || '.woocommerce-product-gallery', replace: true },
+        variantsSelector: s.variantsSelector || '[data-ov25-variants]',
+        ...(s.useSimpleConfigureButton && {
+            useSimpleVariantsSelector: true,
+            configureButtonSelector: { id: s.configureButtonSelector?.trim() || '[data-ov25-configure-button]', replace: true },
+        }),
+        swatchesSelector: s.swatchesSelector || '[data-ov25-swatches]',
+        priceSelector: s.priceSelector || '[data-ov25-price]',
+        images: s.images || [],
+        logoURL: s.logoURL || '',
+        mobileLogoURL: s.mobileLogoURL || undefined,
+        carouselSelector: s.autoCarousel || false,
+        deferThreeD: s.deferThreeD || false,
+        showOptional: s.showOptional || false,
+        hideAr: s.hideAr || false,
+        configuratorDisplayMode: s.useInlineVariantControls ? 'inline' : 'drawer',
+        cssString: s.customCSS || '',
+    };
+}
+
+/**
+ * Convert SerializableInjectConfig to the flat shape expected by OV25.injectConfigurator.
+ */
+function buildInjectFromSerializable(config: SerializableInjectConfig): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+
+    if (config.selectors) {
+        for (const [key, val] of Object.entries(config.selectors)) {
+            if (typeof val === 'object' && val !== null && 'selector' in val) {
+                result[key === 'gallery' ? 'gallerySelector' : `${key}Selector`] = { id: val.selector, replace: val.replace };
+            } else if (typeof val === 'string') {
+                result[key === 'gallery' ? 'gallerySelector' : `${key}Selector`] = val;
+            }
+        }
+    }
+
+    if (config.carousel) {
+        result['carouselSelector'] = config.carousel.desktop !== 'none';
+    }
+
+    if (config.configurator) {
+        const dm = config.configurator.displayMode;
+        if (dm) {
+            result['configuratorDisplayMode'] = dm.desktop === 'inline' ? 'inline' : dm.desktop === 'sheet' ? 'drawer' : dm.desktop;
+        }
+        if (config.configurator.variants?.useSimpleVariantsSelector) {
+            result['useSimpleVariantsSelector'] = true;
+        }
+    }
+
+    if (config.flags) {
+        for (const [key, val] of Object.entries(config.flags)) {
+            result[key] = val;
+        }
+    }
+
+    if (config.branding) {
+        if (config.branding.logoURL) result['logoURL'] = config.branding.logoURL;
+        if (config.branding.mobileLogoURL) result['mobileLogoURL'] = config.branding.mobileLogoURL;
+        if (config.branding.cssString) result['cssString'] = config.branding.cssString;
+    }
+
+    return result;
+}
+
+const doInject = () => {
+    const config = buildConfig();
+    if (!config.apiKey) return;
+
+    OV25.injectConfigurator({
+        ...config,
+        addToBasketFunction: async () => {
+            const form = document.querySelector('form.cart');
+            if (!form) return;
+            try {
+                const screenshotUrl = await window.ov25GenerateThumbnail();
+                const ensureField = (name: string): HTMLInputElement => {
+                    let field = form.querySelector(`input[name="${name}"]`) as HTMLInputElement | null;
+                    if (!field) {
+                        field = Object.assign(document.createElement('input'), { type: 'hidden', name }) as HTMLInputElement;
+                        form.appendChild(field);
+                    }
+                    return field;
+                };
+                ensureField('ov25-thumbnail').value = screenshotUrl;
+                const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+                if (submitButton) submitButton.click();
+            } catch (error) {
+                console.error('Failed to generate thumbnail:', error);
+                const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+                if (submitButton) submitButton.click();
+            }
+        },
+        buySwatchesFunction: async (swatches: Swatch[], rules: SwatchRulesData) => {
+            if (!swatches.length || !rules.enabled) return;
+            try {
+                const checkoutUrl = await createSwatchOnlyCart(swatches, rules);
+                window.location.href = checkoutUrl || window.location.origin + '/checkout/';
+            } catch (error) {
+                console.error('Failed to create swatch cart:', error);
+            }
+        },
+    } as Parameters<typeof OV25.injectConfigurator>[0]);
+};
+
+if (window.ov25Settings?.useSimpleConfigureButton) {
+    if (document.readyState !== 'loading') doInject();
+    else document.addEventListener('DOMContentLoaded', () => doInject());
 } else {
     doInject();
 }
@@ -219,16 +299,13 @@ function runSimpleConfigureButton() {
     container.appendChild(button);
 }
 
-if (document.readyState !== 'loading') {
-    runSimpleConfigureButton();
-} else {
-    document.addEventListener('DOMContentLoaded', runSimpleConfigureButton);
-}
+if (document.readyState !== 'loading') runSimpleConfigureButton();
+else document.addEventListener('DOMContentLoaded', runSimpleConfigureButton);
 
-// CSS + JavaScript trick: Replace add to cart button
+// Replace add to cart button
 document.addEventListener('DOMContentLoaded', () => {
     const ov25Element = document.querySelector('[data-ov25-iframe]');
-    if (!ov25Element) return; // Not an OV25 product, skip
+    if (!ov25Element) return;
 
     const form = document.querySelector('form.cart') as HTMLFormElement;
     if (!form) return;
@@ -236,258 +313,99 @@ document.addEventListener('DOMContentLoaded', () => {
     const originalButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
     if (!originalButton) return;
 
-    // Add CSS to hide the original button
     const style = document.createElement('style');
     style.textContent = `
-        form.cart button[type="submit"] {
-            display: none !important;
-        }
-        .ov25-replacement-button {
-            display: inline-block !important;
-        }
+        form.cart button[type="submit"] { display: none !important; }
+        .ov25-replacement-button { display: inline-block !important; }
     `;
     document.head.appendChild(style);
 
-    // Create replacement button that looks identical
     const replacementButton = originalButton.cloneNode(true) as HTMLButtonElement;
-    replacementButton.type = 'button'; // Not a submit button
+    replacementButton.type = 'button';
     replacementButton.className = originalButton.className + ' ov25-replacement-button';
-    
-    // Insert replacement button right after the original
     originalButton.parentNode?.insertBefore(replacementButton, originalButton.nextSibling);
 
-    // Add click handler to replacement button
     replacementButton.addEventListener('click', async (event) => {
         event.preventDefault();
-        
-        // Show loading state
         const originalText = replacementButton.textContent;
         replacementButton.disabled = true;
         replacementButton.textContent = 'Generating Preview...';
 
         try {
-            // Generate thumbnail at this exact moment
             const screenshotUrl = await window.ov25GenerateThumbnail();
-            
-            // Add thumbnail to form
             const thumbnailField = document.createElement('input');
             thumbnailField.type = 'hidden';
             thumbnailField.name = 'ov25-thumbnail';
             thumbnailField.value = screenshotUrl;
             form.appendChild(thumbnailField);
-
-            // Now trigger the original button to submit the form
             originalButton.click();
         } catch (error) {
             console.error('Failed to generate thumbnail:', error);
-            // Still submit the form even if thumbnail generation fails
             originalButton.click();
         } finally {
-            // Reset button state
             replacementButton.disabled = false;
             replacementButton.textContent = originalText;
         }
     });
 });
 
-/*  ov25-price-bridge.js  */
-/* ov25-price-and-sku-bridge.js */
+// Price and SKU bridge via postMessage
 document.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('message', (ev: MessageEvent) => {
+        let { type, payload } = ev.data ?? {};
+        if (!payload) return;
 
-  window.addEventListener('message', (ev: MessageEvent) => {
-    let { type, payload } = ev.data ?? {};
-    if (!payload) return;
-
-    // Parse if string
-    if (typeof payload === 'string') {
-      try { payload = JSON.parse(payload); }
-      catch { return; }
-    }
-
-    // // Replace price skeleton
-    // if (type === 'CURRENT_PRICE') {
-    //   const { formattedPrice, totalPrice } = payload as PricePayload;
-    //   if (formattedPrice && typeof totalPrice === 'number') {
-    //     document.querySelectorAll('[data-ov25-price]').forEach(el => {
-    //       el.classList.remove('ov25-price-skeleton');
-    //       (el as HTMLElement).innerHTML = formattedPrice;
-    //     });
-    //   }
-    // }
-
-    // Now stash hidden fields for price, payload, and sku
-    if (type === 'CURRENT_PRICE' || type === 'CURRENT_SKU') {
-      const form = document.querySelector('form.cart');
-      if (!form) return;
-
-      const ensureField = (name: string): HTMLInputElement => {
-        let f = form.querySelector(`input[name="${name}"]`) as HTMLInputElement | null;
-        if (!f) {
-          f = Object.assign(document.createElement('input'), {
-            type: 'hidden',
-            name,
-          }) as HTMLInputElement;
-          form.appendChild(f);
+        if (typeof payload === 'string') {
+            try { payload = JSON.parse(payload); }
+            catch { return; }
         }
-        return f;
-      };
 
-      if (type === 'CURRENT_PRICE') {
-        const pricePayload = payload as PricePayload;
-        ensureField('cfg_price').value = String(pricePayload.totalPrice);
-        ensureField('cfg_payload').value = JSON.stringify(payload);
-      }
+        if (type === 'CURRENT_PRICE' || type === 'CURRENT_SKU') {
+            const form = document.querySelector('form.cart');
+            if (!form) return;
 
-      if (type === 'CURRENT_SKU') {
-        const skuPayload = payload as SkuPayload;
-        if (skuPayload.skuString) {
-          ensureField('cfg_sku').value = skuPayload.skuString;
+            const ensureField = (name: string): HTMLInputElement => {
+                let f = form.querySelector(`input[name="${name}"]`) as HTMLInputElement | null;
+                if (!f) {
+                    f = Object.assign(document.createElement('input'), { type: 'hidden', name }) as HTMLInputElement;
+                    form.appendChild(f);
+                }
+                return f;
+            };
+
+            if (type === 'CURRENT_PRICE') {
+                const pricePayload = payload as PricePayload;
+                ensureField('cfg_price').value = String(pricePayload.totalPrice);
+                ensureField('cfg_payload').value = JSON.stringify(payload);
+            }
+
+            if (type === 'CURRENT_SKU') {
+                const skuPayload = payload as SkuPayload;
+                if (skuPayload.skuString) ensureField('cfg_sku').value = skuPayload.skuString;
+                if (skuPayload.skuMap) ensureField('cfg_skumap').value = JSON.stringify(skuPayload.skuMap);
+            }
         }
-        if (skuPayload.skuMap) {
-          ensureField('cfg_skumap').value = JSON.stringify(skuPayload.skuMap);
-        }
-      }
-    }
-  });
+    });
 });
 
-// /*************************************************************************
-//  * OV25 – Ultra‑simple Variant Picker (sends payload as JSON string)
-//  *************************************************************************/
-// document.addEventListener('DOMContentLoaded', () => {
-
-//   /* ------------------------------------------------------------------
-//    * Post helper – always stringifies payload as the spec requires
-//    * ----------------------------------------------------------------*/
-//   function postToConfigurator(type: string, payload: any): void {
-//     const iframe = document.querySelector('iframe[data-ov25-iframe]') ||
-//                    document.querySelector('iframe');
-//     if (!iframe) return;
-    
-//     (iframe as HTMLIFrameElement).contentWindow?.postMessage(
-//       { type, payload: JSON.stringify(payload) },
-//       '*'
-//     );
-//   }
-
-//   /* ------------------------------------------------------------------
-//    * Render simple radios into <div data-ov25-variants>
-//    * ----------------------------------------------------------------*/
-//   function render(state: ConfiguratorState): void {
-//     const mount = document.querySelector('[data-ov25-variants]');
-//     if (!mount) {
-//       return;
-//     }
-//     mount.innerHTML = '';
-
-//     state.options.forEach(opt => {
-//       opt.groups.forEach(grp => {
-
-//         const fs = document.createElement('fieldset');
-//         const lgd = document.createElement('legend');
-//         lgd.textContent =
-//           (grp.name === 'default' || grp.name === 'Default')
-//             ? opt.name
-//             : `${opt.name} – ${grp.name}`;
-//         fs.appendChild(lgd);
-
-//         grp.selections.forEach(sel => {
-//           const label = document.createElement('label');
-//           label.style.cssText = 'display:block;margin:.25em 0;';
-
-//           const radio = Object.assign(document.createElement('input'), {
-//             type: 'radio',
-//             name: `ov25_opt_${opt.id}_${grp.id}`,
-//             value: sel.id,
-//           }) as HTMLInputElement;
-          
-//           label.append(radio, ' ', sel.name);
-//           fs.appendChild(label);
-
-//           /* pre‑select current */
-//           const current = state.selectedSelections?.find(
-//             s => s.optionId === opt.id && s.groupId === grp.id
-//           );
-//           if (current && current.selectionId === sel.id) radio.checked = true;
-
-//           radio.addEventListener('change', () => {
-//             if (!radio.checked) return;
-//             const payload: SelectedSelection = {
-//               optionId: opt.id,
-//               groupId: grp.id,
-//               selectionId: sel.id,
-//             };
-//             postToConfigurator('SELECT_SELECTION', payload);
-//           });
-//         });
-
-//         mount.appendChild(fs);
-//       });
-//     });
-//   }
-
-  /* ------------------------------------------------------------------
-//    * Listen for CONFIGURATOR_STATE
-//    * ----------------------------------------------------------------*/
-//   let latestState: ConfiguratorState | null = null;
-
-//   window.addEventListener('message', (ev: MessageEvent) => {
-//     if (ev.data?.type !== 'CONFIGURATOR_STATE') return;
-
-//     let payload = ev.data.payload;
-//     if (typeof payload === 'string') {
-//       try { payload = JSON.parse(payload); }
-//       catch (e) {
-//         console.error('[OV25] Failed parsing CONFIGURATOR_STATE:', e);
-//         return;
-//       }
-//     }
-//     latestState = payload as ConfiguratorState;
-//     render(latestState);
-//   });
-
-//   /* Re‑render after blocks hydrate (placeholder may appear late) */
-//   document.addEventListener('wc-blocks-rendered', () => {
-//     if (latestState) render(latestState);
-//   });
-// }); 
-
-// Helper function to create a swatch-only cart session
 async function createSwatchOnlyCart(swatches: Swatch[], rules: SwatchRulesData): Promise<string | undefined> {
-    try {
-        // Create swatch cart data
-        const swatchCartData = {
-            swatches: swatches,
-            rules: rules,
-            timestamp: Date.now()
-        };
+    const swatchCartData = { swatches, rules, timestamp: Date.now() };
+    const restUrl = window.ov25Settings?.createSwatchCartUrl ||
+        (window.ov25Settings?.restBase ? `${window.ov25Settings.restBase}ov25/v1/create-swatch-cart` : null) ||
+        window.location.origin + '/?rest_route=/ov25/v1/create-swatch-cart';
 
-        // Send to backend to create swatch-only cart using REST API
-        // Use WordPress-provided URL which handles both pretty and plain permalinks
-        const restUrl = window.ov25Settings?.createSwatchCartUrl || 
-            (window.ov25Settings?.restBase ? `${window.ov25Settings.restBase}ov25/v1/create-swatch-cart` : null) ||
-            window.location.origin + '/?rest_route=/ov25/v1/create-swatch-cart';
-        const response = await fetch(restUrl, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                swatch_data: JSON.stringify(swatchCartData)
-            })
-        });
+    const response = await fetch(restUrl, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ swatch_data: JSON.stringify(swatchCartData) }),
+    });
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `Failed to create swatch cart: ${response.status}`);
-        }
-
-        const result = await response.json();
-        const checkoutUrl = result.checkout_url as string | undefined;
-        if (checkoutUrl) { (window as any).ov25CheckoutUrl = checkoutUrl; }
-        return checkoutUrl;
-    } catch (error) {
-        throw error;
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to create swatch cart: ${response.status}`);
     }
+
+    const result = await response.json();
+    return result.checkout_url as string | undefined;
 }

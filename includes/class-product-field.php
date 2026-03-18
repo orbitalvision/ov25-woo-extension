@@ -31,16 +31,41 @@ class OV25_Product_Field {
 	
 	/**
 	 * Add the OV25 Product ID field to the product data general tab.
+	 * Renders a React mount point for the product selector alongside a hidden input
+	 * for backward compatibility with the existing save handler.
 	 */
 	public static function add_product_field() {
+		global $post;
+		$product_id   = get_post_meta( $post->ID, '_ov25_product_id', true );
+		$use_custom   = get_post_meta( $post->ID, '_ov25_use_custom_config', true );
+		$custom_config = get_post_meta( $post->ID, '_ov25_configurator_config', true );
+
 		echo '<div class="options_group show_if_simple show_if_variable show_if_grouped show_if_external">';
+
+		// Hidden fields for form submission (backward compatible with existing save handler)
+		echo '<input type="hidden" name="_ov25_product_id" id="_ov25_product_id" value="' . esc_attr( $product_id ) . '" />';
+		echo '<input type="hidden" name="_ov25_use_custom_config" value="' . esc_attr( $use_custom ?: 'no' ) . '" />';
+		echo '<input type="hidden" name="_ov25_configurator_config" value="' . esc_attr( $custom_config ?: '{}' ) . '" />';
+
+		// React mount point for enhanced product selector
+		echo '<div id="ov25-product-field-root"'
+			. ' data-product-id="' . esc_attr( $post->ID ) . '"'
+			. ' data-current-link="' . esc_attr( $product_id ) . '"'
+			. ' data-use-custom-config="' . esc_attr( $use_custom ?: 'no' ) . '"'
+			. ' data-custom-config="' . esc_attr( $custom_config ?: '{}' ) . '"'
+			. '></div>';
+
+		// Fallback plain text input (shown when admin JS doesn't load)
+		echo '<noscript>';
 		woocommerce_wp_text_input( array(
-			'id'          => '_ov25_product_id',
+			'id'          => '_ov25_product_id_noscript',
 			'label'       => __( 'OV25 Product ID', 'ov25-woo-extension' ),
 			'placeholder' => __( 'e.g. 97 or range/16', 'ov25-woo-extension' ),
 			'desc_tip'    => true,
-			'description' => __( 'Optional ID used by the OV25 3D Configurator. Works with all product types including variable products.', 'ov25-woo-extension' ),
+			'description' => __( 'Optional ID used by the OV25 3D Configurator.', 'ov25-woo-extension' ),
+			'value'       => $product_id,
 		) );
+		echo '</noscript>';
 		echo '</div>';
 	}
 	
@@ -70,24 +95,38 @@ class OV25_Product_Field {
 	}
 	
 	/**
-	 * Save the OV25 Product ID field.
+	 * Save the OV25 Product ID field and per-product config.
 	 *
 	 * @param WC_Product $product Product object.
 	 */
 	public static function save_product_field( $product ) {
-		// Save from general tab field
 		if ( isset( $_POST['_ov25_product_id'] ) ) {
 			$product->update_meta_data(
 				'_ov25_product_id',
 				sanitize_text_field( wp_unslash( $_POST['_ov25_product_id'] ) )
 			);
 		}
-		
-		// Save from advanced tab field (fallback)
+
 		if ( isset( $_POST['_ov25_product_id_advanced'] ) ) {
 			$product->update_meta_data(
 				'_ov25_product_id',
 				sanitize_text_field( wp_unslash( $_POST['_ov25_product_id_advanced'] ) )
+			);
+		}
+
+		if ( isset( $_POST['_ov25_use_custom_config'] ) ) {
+			$product->update_meta_data(
+				'_ov25_use_custom_config',
+				sanitize_text_field( wp_unslash( $_POST['_ov25_use_custom_config'] ) )
+			);
+		}
+
+		if ( isset( $_POST['_ov25_configurator_config'] ) ) {
+			$raw = wp_unslash( $_POST['_ov25_configurator_config'] );
+			$decoded = json_decode( $raw, true );
+			$product->update_meta_data(
+				'_ov25_configurator_config',
+				$decoded !== null ? wp_json_encode( $decoded ) : '{}'
 			);
 		}
 	}
