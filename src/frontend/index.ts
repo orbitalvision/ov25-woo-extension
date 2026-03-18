@@ -122,6 +122,18 @@ function buildConfig(): Record<string, unknown> {
 
     const hasJsonConfig = s.configuratorConfig && Object.keys(s.configuratorConfig).length > 0;
 
+    // WooCommerce selectors: manual Global Settings value, or WooCommerce defaults.
+    // These always override JSON config selectors (which use platform defaults like .configurator-container).
+    const selectorOverrides: Record<string, unknown> = {
+        gallerySelector: { id: s.gallerySelector || '.woocommerce-product-gallery', replace: true },
+        variantsSelector: s.variantsSelector || '[data-ov25-variants]',
+        priceSelector: s.priceSelector || '[data-ov25-price]',
+        swatchesSelector: s.swatchesSelector || '[data-ov25-swatches]',
+    };
+    if (s.configureButtonSelector?.trim()) {
+        selectorOverrides.configureButtonSelector = { id: s.configureButtonSelector.trim(), replace: true };
+    }
+
     if (hasJsonConfig && s.configuratorConfig) {
         const layoutType = getLayoutType(productLink);
         let config = s.configuratorConfig[layoutType] || s.configuratorConfig['standard'] || {};
@@ -138,21 +150,21 @@ function buildConfig(): Record<string, unknown> {
             productLink,
             images: s.images || [],
             ...buildInjectFromSerializable(config),
+            ...selectorOverrides,
         };
     }
 
-    // Legacy flat config fallback
     return {
         apiKey,
         productLink,
-        gallerySelector: { id: s.gallerySelector || '.woocommerce-product-gallery', replace: true },
-        variantsSelector: s.variantsSelector || '[data-ov25-variants]',
+        gallerySelector: selectorOverrides.gallerySelector || { id: '.woocommerce-product-gallery', replace: true },
+        variantsSelector: selectorOverrides.variantsSelector || '[data-ov25-variants]',
         ...(s.useSimpleConfigureButton && {
             useSimpleVariantsSelector: true,
-            configureButtonSelector: { id: s.configureButtonSelector?.trim() || '[data-ov25-configure-button]', replace: true },
+            configureButtonSelector: selectorOverrides.configureButtonSelector || { id: '[data-ov25-configure-button]', replace: true },
         }),
-        swatchesSelector: s.swatchesSelector || '[data-ov25-swatches]',
-        priceSelector: s.priceSelector || '[data-ov25-price]',
+        swatchesSelector: selectorOverrides.swatchesSelector || '[data-ov25-swatches]',
+        priceSelector: selectorOverrides.priceSelector || '[data-ov25-price]',
         images: s.images || [],
         logoURL: s.logoURL || '',
         mobileLogoURL: s.mobileLogoURL || undefined,

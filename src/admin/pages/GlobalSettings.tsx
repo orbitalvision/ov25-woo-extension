@@ -21,16 +21,16 @@ export function GlobalSettings() {
   };
 
   const fields = [
-    { key: 'apiKey', label: 'Public API Key', type: 'text' },
-    { key: 'privateApiKey', label: 'Private API Key', type: 'password' },
-    { key: 'gallerySelector', label: 'Gallery Selector', type: 'text' },
-    { key: 'variantsSelector', label: 'Variants Selector', type: 'text' },
-    { key: 'priceSelector', label: 'Price Selector', type: 'text' },
-    { key: 'swatchesSelector', label: 'Swatches Selector', type: 'text' },
-    { key: 'configureButtonSelector', label: 'Configure Button Selector', type: 'text' },
-    { key: 'logoURL', label: 'Logo URL', type: 'text' },
-    { key: 'mobileLogoURL', label: 'Mobile Logo URL', type: 'text' },
-    { key: 'customCSS', label: 'Custom CSS', type: 'textarea' },
+    { key: 'apiKey', label: 'Public API Key', type: 'text', placeholder: '' },
+    { key: 'privateApiKey', label: 'Private API Key', type: 'password', placeholder: '' },
+    { key: 'gallerySelector', label: 'Gallery Selector', type: 'text', placeholder: '.woocommerce-product-gallery' },
+    { key: 'variantsSelector', label: 'Variants Selector', type: 'text', placeholder: '[data-ov25-variants]' },
+    { key: 'priceSelector', label: 'Price Selector', type: 'text', placeholder: '[data-ov25-price]' },
+    { key: 'swatchesSelector', label: 'Swatches Selector', type: 'text', placeholder: '[data-ov25-swatches]' },
+    { key: 'configureButtonSelector', label: 'Configure Button Selector', type: 'text', placeholder: '[data-ov25-configure-button]' },
+    { key: 'logoURL', label: 'Logo URL', type: 'text', placeholder: 'https://...' },
+    { key: 'mobileLogoURL', label: 'Mobile Logo URL', type: 'text', placeholder: 'https://...' },
+    { key: 'customCSS', label: 'Custom CSS', type: 'textarea', placeholder: '' },
   ];
 
   return (
@@ -38,7 +38,7 @@ export function GlobalSettings() {
       <h2>Global Settings</h2>
       {error && <div className="ov25-error">{error}</div>}
       <div className="ov25-form">
-        {fields.map(({ key, label, type }) => (
+        {fields.map(({ key, label, type, placeholder }) => (
           <div key={key} className="ov25-field">
             <label htmlFor={`ov25-${key}`}>{label}</label>
             {type === 'textarea' ? (
@@ -46,6 +46,7 @@ export function GlobalSettings() {
                 id={`ov25-${key}`}
                 value={(merged[key] as string) || ''}
                 onChange={(e) => handleChange(key, e.target.value)}
+                placeholder={placeholder}
                 rows={4}
               />
             ) : (
@@ -54,6 +55,7 @@ export function GlobalSettings() {
                 type={type}
                 value={(merged[key] as string) || ''}
                 onChange={(e) => handleChange(key, e.target.value)}
+                placeholder={placeholder}
               />
             )}
           </div>

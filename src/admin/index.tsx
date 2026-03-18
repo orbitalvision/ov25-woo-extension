@@ -1,8 +1,21 @@
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { ProductField } from './components/ProductField';
 import './admin.css';
 
-const root = document.getElementById('ov25-admin-root');
-if (root) {
-  createRoot(root).render(<App />);
+const adminRoot = document.getElementById('ov25-admin-root');
+if (adminRoot) {
+  createRoot(adminRoot).render(<App />);
+}
+
+const productFieldRoot = document.getElementById('ov25-product-field-root');
+if (productFieldRoot) {
+  createRoot(productFieldRoot).render(
+    <ProductField
+      wooProductId={productFieldRoot.dataset.productId || ''}
+      currentLink={productFieldRoot.dataset.currentLink || ''}
+      useCustomConfig={productFieldRoot.dataset.useCustomConfig || 'no'}
+      customConfig={productFieldRoot.dataset.customConfig || '{}'}
+    />
+  );
 }

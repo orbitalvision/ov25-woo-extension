@@ -214,19 +214,6 @@ if ( ! class_exists( 'ov25_woo_extension' ) ) :
 		 * Constructor.
 		 */
 		public function __construct() {
-			try {
-				if ( is_admin() ) {
-					$setup_file = dirname( __FILE__ ) . '/includes/admin/setup.php';
-					if ( file_exists( $setup_file ) ) {
-						include_once $setup_file;
-						if ( class_exists( 'Ov25WooExtension\Admin\Setup' ) ) {
-							new \Ov25WooExtension\Admin\Setup();
-						}
-					}
-				}
-			} catch ( Exception $e ) {
-				error_log( 'OV25 Woo Extension: Error in constructor - ' . $e->getMessage() );
-			}
 		}
 
 		/**

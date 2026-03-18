@@ -1,12 +1,29 @@
 export function OV25Logo() {
   return (
-    <div className="ov25-gradient" style={{ padding: '16px 24px', marginBottom: '24px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" fill="white"/>
-        <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" fill="white"/>
+    <div style={{
+      padding: '16px 24px',
+      marginBottom: '24px',
+      borderRadius: '8px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      background: '#fff',
+      border: '1px solid #e0e0e0',
+    }}>
+      <svg height="36" viewBox="0 0 2890.34 812.82" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="ov25-grad" x1="0" y1="0" x2="2890.34" y2="0" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#26E8FE" />
+            <stop offset="50%" stopColor="#808AFF" />
+            <stop offset="100%" stopColor="#A41EFE" />
+          </linearGradient>
+        </defs>
+        <path fill="url(#ov25-grad)" d="M406.27,812.54C182.25,812.54,0,630.29,0,406.27S182.25,0,406.27,0s406.27,182.25,406.27,406.27-182.25,406.27-406.27,406.27Z"/>
+        <path fill="url(#ov25-grad)" d="M1637.71,796.18v-130.99l324.82-308.58c14.45-13.76,26.45-28.54,35.68-43.92,8.44-14.07,12.74-29.57,13.14-47.41.99-43.77-30.64-77.37-75.21-79.9l-.53-.03-3.39-.54-.53.12c-2.08-.15-4.3-.23-6.57-.23-26.43,0-89.64,10.28-105.86,105.46l-2.01,11.81-185.53-51.91.56-8.72c.15-2.38,4.11-58.46,43.62-117.72,39.41-59.12,95.13-87,97.48-88.16,44.76-21.63,96.13-32.62,152.58-32.62s106.87,10.02,150.14,29.77c43.79,20.02,78.08,49.36,101.93,87.22,23.82,37.83,35.9,83.29,35.9,135.11,0,47.4-12.4,92.23-36.85,133.25-23.98,40.22-55.56,77.06-93.84,109.52l-126.16,113.86h262.28v184.62h-581.67Z"/>
+        <polygon fill="url(#ov25-grad)" points="743.25 0 1663.92 0 1203.58 797.33 743.25 0"/>
+        <path fill="url(#ov25-grad)" d="M2627.31,275.03l-4.09.02c-25.57.35-50.39,3.86-73.75,10.43l-20.18,5.68,3.57-87.7h321.55V18.84h-499.37l-29.47,369.76h0l-2.23,24.87,172.41,99.54c7.4-45.33,46.72-79.93,94.14-79.93,52.7,0,95.41,42.72,95.41,95.41s-42.72,95.41-95.41,95.41c-47.42,0-86.74-34.6-94.14-79.93l-183.7,106.06,3.43,6.98h-.02c.09.18.18.34.27.5l.25.51s.04.02.04.02c17.61,33.71,41.61,62.85,71.52,86.75,56.49,45.14,129.47,68.02,216.92,68.02,160.31,0,285.88-118.11,285.88-268.88s-113.08-268.91-263.03-268.91Z"/>
       </svg>
-      <span style={{ color: 'white', fontSize: '20px', fontWeight: 700, letterSpacing: '0.05em' }}>OV25</span>
-      <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', marginLeft: 'auto' }}>
+      <span style={{ color: 'rgba(0,0,0,0.4)', fontSize: '12px', marginLeft: 'auto' }}>
         v{window.ov25Admin?.version || ''}
       </span>
     </div>

@@ -137,7 +137,7 @@ class OV25_Admin_API {
 			);
 		}
 
-		$api_url = 'https://ov25.ai/api/public/products-list?apiKey=' . urlencode( $private_key );
+		$api_url = 'https://app.ov25.ai/api/public/products-list?apiKey=' . urlencode( $private_key );
 
 		$response = wp_remote_get( $api_url, array(
 			'timeout' => 30,
@@ -159,9 +159,11 @@ class OV25_Admin_API {
 		$body        = wp_remote_retrieve_body( $response );
 
 		if ( $status_code !== 200 ) {
+			$error_data = json_decode( $body, true );
+			$message    = isset( $error_data['error'] ) ? $error_data['error'] : "OV25 API returned status {$status_code}";
 			return new WP_Error(
 				'api_error',
-				__( 'OV25 API returned an error.', 'ov25-woo-extension' ),
+				$message,
 				array( 'status' => $status_code )
 			);
 		}

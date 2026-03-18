@@ -100,3 +100,11 @@
   gap: 8px;
   font-weight: 400;
 }
+
+/* Radix UI portals (popover, select, dialog) must sit above WP fullscreen modal */
+[data-radix-popper-content-wrapper] {
+  z-index: 100001 !important;
+}
+[data-radix-select-viewport] {
+  z-index: 100001 !important;
+}

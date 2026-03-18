@@ -15,15 +15,8 @@ class OV25_Admin_Page {
 	}
 
 	public static function register_menu() {
-		$icon_svg = 'data:image/svg+xml;base64,' . base64_encode(
-			'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">'
-			. '<defs><linearGradient id="ov25g" x1="0%" y1="0%" x2="100%" y2="0%">'
-			. '<stop offset="0%" stop-color="#26E8FE"/><stop offset="50%" stop-color="#808AFF"/><stop offset="100%" stop-color="#A41EFE"/>'
-			. '</linearGradient></defs>'
-			. '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" fill="url(#ov25g)"/>'
-			. '<path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" fill="url(#ov25g)"/>'
-			. '</svg>'
-		);
+		$icon_path = dirname( MAIN_PLUGIN_FILE ) . '/assets/ov-logo.svg';
+		$icon_svg  = 'data:image/svg+xml;base64,' . base64_encode( file_get_contents( $icon_path ) );
 
 		add_menu_page(
 			__( 'OV25', 'ov25-woo-extension' ),
@@ -41,7 +34,12 @@ class OV25_Admin_Page {
 	}
 
 	public static function enqueue_scripts( $hook ) {
-		if ( 'toplevel_page_ov25' !== $hook ) {
+		$is_ov25_page    = 'toplevel_page_ov25' === $hook;
+		$is_product_edit = in_array( $hook, array( 'post.php', 'post-new.php' ), true )
+			&& isset( $_GET['post'] ) && get_post_type( absint( $_GET['post'] ) ) === 'product'
+			|| ( 'post-new.php' === $hook && isset( $_GET['post_type'] ) && $_GET['post_type'] === 'product' );
+
+		if ( ! $is_ov25_page && ! $is_product_edit ) {
 			return;
 		}
 
