@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { useSettings } from '../hooks/useSettings';
+import { useSettingsContext } from '../context/SettingsContext';
 
 export function SwatchSettings() {
-  const { settings, loading, saving, error, saveSettings } = useSettings();
+  const { settings, loading, saving, error, saveSettings } = useSettingsContext();
   const [local, setLocal] = useState<Record<string, unknown>>({});
 
-  if (loading) return <div className="ov25-page"><p>Loading...</p></div>;
-
-  const merged = { ...settings, ...local };
+  const merged = { ...(settings ?? {}), ...local };
 
   const handleChange = (key: string, value: string | boolean) => {
     setLocal((prev) => ({ ...prev, [key]: value }));
@@ -23,8 +21,9 @@ export function SwatchSettings() {
   return (
     <div className="ov25-page">
       <h2>Swatch Settings</h2>
+      {loading && <p className="ov25-muted">Loading…</p>}
       {error && <div className="ov25-error">{error}</div>}
-      <div className="ov25-form">
+      {!loading && <div className="ov25-form">
         <div className="ov25-field ov25-field--checkbox">
           <label>
             <input
@@ -81,7 +80,7 @@ export function SwatchSettings() {
         >
           {saving ? 'Saving...' : 'Save Swatch Settings'}
         </button>
-      </div>
+      </div>}
     </div>
   );
 }

@@ -63,6 +63,7 @@ class OV25_Admin_API {
 		return rest_ensure_response( array(
 			'apiKey'             => get_option( 'ov25_api_key', '' ),
 			'privateApiKey'      => get_option( 'ov25_private_api_key', '' ),
+			'orgName'            => get_option( 'ov25_org_name', '' ),
 			'configuratorConfig' => json_decode( get_option( 'ov25_configurator_config', '{}' ), true ),
 			'logoURL'            => get_option( 'ov25_logo_url', '' ),
 			'mobileLogoURL'      => get_option( 'ov25_mobile_logo_url', '' ),
@@ -86,6 +87,7 @@ class OV25_Admin_API {
 		$text_options = array(
 			'apiKey'             => 'ov25_api_key',
 			'privateApiKey'      => 'ov25_private_api_key',
+			'orgName'            => 'ov25_org_name',
 			'logoURL'            => 'ov25_logo_url',
 			'mobileLogoURL'      => 'ov25_mobile_logo_url',
 			'gallerySelector'    => 'ov25_gallery_selector',

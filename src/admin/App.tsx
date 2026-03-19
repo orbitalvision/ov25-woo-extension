@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard';
 import { GlobalSettings } from './pages/GlobalSettings';
 import { ConfiguratorSetupPage } from './pages/ConfiguratorSetup';
 import { SwatchSettings } from './pages/SwatchSettings';
+import { SettingsProvider } from './context/SettingsContext';
 
 declare global {
   interface Window {
@@ -13,6 +14,10 @@ declare global {
       nonce: string;
       apiKey: string;
       privateApiKey: string;
+      orgName: string;
+      ov25LinkBaseUrl: string;
+      ov25StoreUrl: string;
+      ov25LinkState: string;
       configuratorConfig: Record<string, unknown>;
       version: string;
       settings: Record<string, string>;
@@ -33,15 +38,17 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
 
   return (
-    <div className="ov25-admin">
-      <OV25Logo />
-      <TabNav tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
-      <div className="ov25-admin-content">
-        {activeTab === 'dashboard' && <Dashboard />}
-        {activeTab === 'settings' && <GlobalSettings />}
-        {activeTab === 'configurator' && <ConfiguratorSetupPage />}
-        {activeTab === 'swatches' && <SwatchSettings />}
+    <SettingsProvider>
+      <div className="ov25-admin">
+        <OV25Logo />
+        <TabNav tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
+        <div className="ov25-admin-content">
+          {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'settings' && <GlobalSettings />}
+          {activeTab === 'configurator' && <ConfiguratorSetupPage />}
+          {activeTab === 'swatches' && <SwatchSettings />}
+        </div>
       </div>
-    </div>
+    </SettingsProvider>
   );
 }

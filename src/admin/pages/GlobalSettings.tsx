@@ -1,13 +1,26 @@
-import { useState } from 'react';
-import { useSettings } from '../hooks/useSettings';
+import { useState, useRef, useCallback } from 'react';
+import { useSettingsContext } from '../context/SettingsContext';
+
+const OV25_ORIGIN = (() => {
+  try {
+    return new URL((window as any).ov25Admin?.ov25LinkBaseUrl || 'https://woocommerce.ov25.ai').origin;
+  } catch {
+    return 'https://woocommerce.ov25.ai';
+  }
+})();
 
 export function GlobalSettings() {
-  const { settings, loading, saving, error, saveSettings } = useSettings();
+  const { settings, loading, saving, error, saveSettings, refetch } = useSettingsContext();
   const [localSettings, setLocalSettings] = useState<Record<string, unknown>>({});
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [disconnectLoading, setDisconnectLoading] = useState(false);
+  const linkStateRef = useRef<string | null>(null);
 
-  if (loading) return <div className="ov25-page"><p>Loading settings...</p></div>;
-
-  const merged = { ...settings, ...localSettings };
+  const merged = { ...(settings ?? {}), ...localSettings };
+  const apiKey = String(merged.apiKey ?? '').trim();
+  const privateApiKey = String(merged.privateApiKey ?? '').trim();
+  const orgName = String(merged.orgName ?? '').trim();
+  const isLinked = !!(apiKey && privateApiKey);
 
   const handleChange = (key: string, value: string) => {
     setLocalSettings((prev) => ({ ...prev, [key]: value }));
@@ -20,6 +33,79 @@ export function GlobalSettings() {
     } catch { /* error displayed by hook */ }
   };
 
+  const handleLinkToOv25 = useCallback(() => {
+    const admin = (window as any).ov25Admin;
+    const baseUrl = admin?.ov25LinkBaseUrl || 'https://woocommerce.ov25.ai';
+    const storeUrl = admin?.ov25StoreUrl || '';
+    const state = admin?.ov25LinkState || '';
+    if (!storeUrl) return;
+    linkStateRef.current = state;
+    const url = `${baseUrl}/woocommerce/link?${new URLSearchParams({ store_url: storeUrl, state }).toString()}`;
+    const w = window.open(url, 'ov25-woo-link', 'width=600,height=700');
+    if (!w) {
+      alert('Popup blocked. Please allow popups for this site.');
+      return;
+    }
+    setLinkLoading(true);
+    const listener = (event: MessageEvent) => {
+      if (event.origin !== OV25_ORIGIN) return;
+      const d = event.data;
+      if (d?.type !== 'ov25-link-complete') return;
+      if (d.error) {
+        setLinkLoading(false);
+        window.removeEventListener('message', listener);
+        return;
+      }
+      const expectedState = linkStateRef.current;
+      if (expectedState != null && d.state !== expectedState) {
+        setLinkLoading(false);
+        window.removeEventListener('message', listener);
+        return;
+      }
+      saveSettings({
+        apiKey: d.apiKey ?? '',
+        privateApiKey: d.privateApiKey ?? '',
+        orgName: d.orgName ?? '',
+      }).then(() => {
+        w.close();
+        refetch();
+      }).finally(() => {
+        setLinkLoading(false);
+        window.removeEventListener('message', listener);
+      });
+    };
+    window.addEventListener('message', listener);
+    const checkClosed = setInterval(() => {
+      if (w.closed) {
+        clearInterval(checkClosed);
+        setLinkLoading(false);
+        window.removeEventListener('message', listener);
+      }
+    }, 500);
+  }, [saveSettings, refetch]);
+
+  const handleDisconnect = useCallback(async () => {
+    const admin = (window as any).ov25Admin;
+    const baseUrl = admin?.ov25LinkBaseUrl || 'https://woocommerce.ov25.ai';
+    const key = (merged.privateApiKey as string) || (admin?.privateApiKey as string);
+    if (!key) return;
+    setDisconnectLoading(true);
+    try {
+      await fetch(`${baseUrl}/api/woocommerce/link/disconnect`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}` },
+      });
+      await saveSettings({ apiKey: '', privateApiKey: '', orgName: '' });
+      refetch();
+    } catch {
+      // still clear locally
+      await saveSettings({ apiKey: '', privateApiKey: '', orgName: '' });
+      refetch();
+    } finally {
+      setDisconnectLoading(false);
+    }
+  }, [merged.privateApiKey, saveSettings, refetch]);
+
   const fields = [
     { key: 'apiKey', label: 'Public API Key', type: 'text', placeholder: '' },
     { key: 'privateApiKey', label: 'Private API Key', type: 'password', placeholder: '' },
@@ -28,15 +114,43 @@ export function GlobalSettings() {
     { key: 'priceSelector', label: 'Price Selector', type: 'text', placeholder: '[data-ov25-price]' },
     { key: 'swatchesSelector', label: 'Swatches Selector', type: 'text', placeholder: '[data-ov25-swatches]' },
     { key: 'configureButtonSelector', label: 'Configure Button Selector', type: 'text', placeholder: '[data-ov25-configure-button]' },
-    { key: 'logoURL', label: 'Logo URL', type: 'text', placeholder: 'https://...' },
-    { key: 'mobileLogoURL', label: 'Mobile Logo URL', type: 'text', placeholder: 'https://...' },
-    { key: 'customCSS', label: 'Custom CSS', type: 'textarea', placeholder: '' },
   ];
 
   return (
     <div className="ov25-page">
       <h2>Global Settings</h2>
+      {loading && <p className="ov25-muted">Loading settings…</p>}
       {error && <div className="ov25-error">{error}</div>}
+      <p className="ov25-muted" style={{ marginBottom: '1rem' }}>Or enter your API keys manually below.</p>
+      <div className="ov25-form ov25-link-section" style={{ marginBottom: '1.5rem' }}>
+        {isLinked ? (
+          <>
+            <p className="ov25-connected">
+              Connected as <strong>{orgName || 'OV25'}</strong>
+            </p>
+            <button
+              type="button"
+              className="button"
+              onClick={handleDisconnect}
+              disabled={disconnectLoading}
+            >
+              {disconnectLoading ? 'Disconnecting…' : 'Disconnect'}
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="ov25-muted">Connect your store to OV25 to get API keys.</p>
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={handleLinkToOv25}
+              disabled={linkLoading}
+            >
+              {linkLoading ? 'Opening…' : 'Link to OV25'}
+            </button>
+          </>
+        )}
+      </div>
       <div className="ov25-form">
         {fields.map(({ key, label, type, placeholder }) => (
           <div key={key} className="ov25-field">
@@ -44,7 +158,7 @@ export function GlobalSettings() {
             {type === 'textarea' ? (
               <textarea
                 id={`ov25-${key}`}
-                value={(merged[key] as string) || ''}
+                value={typeof merged[key] === 'string' ? merged[key] as string : ''}
                 onChange={(e) => handleChange(key, e.target.value)}
                 placeholder={placeholder}
                 rows={4}
@@ -53,7 +167,7 @@ export function GlobalSettings() {
               <input
                 id={`ov25-${key}`}
                 type={type}
-                value={(merged[key] as string) || ''}
+                value={typeof merged[key] === 'string' ? merged[key] as string : ''}
                 onChange={(e) => handleChange(key, e.target.value)}
                 placeholder={placeholder}
               />

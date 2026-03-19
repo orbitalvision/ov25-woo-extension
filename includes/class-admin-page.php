@@ -30,6 +30,13 @@ class OV25_Admin_Page {
 	}
 
 	public static function render_page() {
+		if ( '' === get_option( 'permalink_structure' ) ) {
+			$permalink_url = admin_url( 'options-permalink.php' );
+			echo '<div class="notice notice-warning is-dismissible"><p>';
+			echo esc_html__( 'OV25 and WooCommerce REST require a non-Plain permalink structure. Please set your permalinks to anything other than Plain.', 'ov25-woo-extension' );
+			echo ' <a href="' . esc_url( $permalink_url ) . '">' . esc_html__( 'Go to Permalink Settings', 'ov25-woo-extension' ) . '</a>';
+			echo '</p></div>';
+		}
 		echo '<div class="wrap"><div id="ov25-admin-root"></div></div>';
 	}
 
@@ -62,11 +69,16 @@ class OV25_Admin_Page {
 			true
 		);
 
+		$ov25_link_base = defined( 'OV25_APP_URL' ) ? OV25_APP_URL : 'https://woocommerce.ov25.ai';
 		wp_localize_script( 'ov25-admin', 'ov25Admin', array(
 			'restBase'           => esc_url_raw( get_rest_url( null, 'ov25/v1/' ) ),
 			'nonce'              => wp_create_nonce( 'wp_rest' ),
 			'apiKey'             => get_option( 'ov25_api_key', '' ),
 			'privateApiKey'      => get_option( 'ov25_private_api_key', '' ),
+			'orgName'            => get_option( 'ov25_org_name', '' ),
+			'ov25LinkBaseUrl'    => esc_url_raw( rtrim( $ov25_link_base, '/' ) ),
+			'ov25StoreUrl'      => esc_url_raw( home_url( '/', 'https' ) ),
+			'ov25LinkState'     => wp_create_nonce( 'ov25_woo_link' ),
 			'configuratorConfig' => json_decode( get_option( 'ov25_configurator_config', '{}' ), true ),
 			'version'            => defined( 'OV25_VERSION' ) ? OV25_VERSION : '0.3.47',
 			'settings'           => array(
