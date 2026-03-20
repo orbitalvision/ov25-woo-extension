@@ -78,6 +78,7 @@ class OV25_Admin_API {
 			'swatchesPageTitle'  => get_option( 'ov25_swatches_page_title', 'Swatches' ),
 			'swatchesShowInNav'  => get_option( 'ov25_swatches_show_in_nav', 'no' ),
 			'swatchesTestMode'   => get_option( 'ov25_swatches_test_mode', 'no' ),
+			'useSimpleConfigureButton' => get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes',
 		) );
 	}
 
@@ -116,6 +117,13 @@ class OV25_Admin_API {
 			if ( isset( $params[ $key ] ) ) {
 				update_option( $option_name, $params[ $key ] === 'yes' || $params[ $key ] === true ? 'yes' : 'no' );
 			}
+		}
+
+		if ( isset( $params['useSimpleConfigureButton'] ) ) {
+			update_option(
+				'ov25_use_simple_configure_button',
+				( $params['useSimpleConfigureButton'] === true || $params['useSimpleConfigureButton'] === 'yes' ) ? 'yes' : 'no'
+			);
 		}
 
 		if ( isset( $params['configuratorConfig'] ) && is_array( $params['configuratorConfig'] ) ) {

@@ -22,7 +22,7 @@ export function GlobalSettings() {
   const orgName = String(merged.orgName ?? '').trim();
   const isLinked = !!(apiKey && privateApiKey);
 
-  const handleChange = (key: string, value: string) => {
+  const handleChange = (key: string, value: string | boolean) => {
     setLocalSettings((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -116,6 +116,8 @@ export function GlobalSettings() {
     { key: 'configureButtonSelector', label: 'Configure Button Selector', type: 'text', placeholder: '[data-ov25-configure-button]' },
   ];
 
+  const useSimpleConfigure = merged.useSimpleConfigureButton === true || merged.useSimpleConfigureButton === 'yes';
+
   return (
     <div className="ov25-page">
       <h2>Global Settings</h2>
@@ -152,6 +154,17 @@ export function GlobalSettings() {
         )}
       </div>
       <div className="ov25-form">
+        <div className="ov25-field">
+          <label htmlFor="ov25-use-simple-configure" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+            <input
+              id="ov25-use-simple-configure"
+              type="checkbox"
+              checked={useSimpleConfigure}
+              onChange={(e) => handleChange('useSimpleConfigureButton', e.target.checked)}
+            />
+            Use simple configure button (single CONFIGURE control instead of inline variants)
+          </label>
+        </div>
         {fields.map(({ key, label, type, placeholder }) => (
           <div key={key} className="ov25-field">
             <label htmlFor={`ov25-${key}`}>{label}</label>

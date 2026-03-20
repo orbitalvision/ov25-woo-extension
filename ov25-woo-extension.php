@@ -268,9 +268,6 @@ function ov25_woo_extension_init() {
 		}
 
 		ov25_woo_extension::instance();
-		
-		// Add settings tab
-		add_filter( 'woocommerce_get_settings_pages', 'ov25_woo_extension_add_settings' );
 
 		// Load admin page and REST API
 		$admin_page_file = dirname( __FILE__ ) . '/includes/class-admin-page.php';
@@ -412,15 +409,6 @@ function ov25_woo_extension_init() {
 				$use_custom = $product->get_meta( '_ov25_use_custom_config', true );
 
 				wp_localize_script( 'ov25-frontend', 'ov25Settings', array(
-					// Legacy flat settings (kept for backward compat during transition)
-					'logoURL' => get_option( 'ov25_logo_url', '' ),
-					'mobileLogoURL' => get_option( 'ov25_mobile_logo_url', '' ),
-					'autoCarousel' => get_option( 'ov25_auto_carousel', 'no' ) === 'yes',
-					'deferThreeD' => get_option( 'ov25_defer_3d', 'yes' ) === 'yes',
-					'showOptional' => get_option( 'ov25_show_optional', 'no' ) === 'yes',
-					'hideAr' => get_option( 'ov25_hide_ar', 'no' ) === 'yes',
-					'useInlineVariantControls' => get_option( 'ov25_use_inline_variant_controls', 'no' ) === 'yes',
-					'useSimpleConfigureButton' => get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes',
 					'images' => function_exists( 'wc_get_product' ) ? ov25_get_product_images() : array(),
 					'gallerySelector' => get_option( 'ov25_gallery_selector', '' ),
 					'variantsSelector' => get_option( 'ov25_variants_selector', '' ),
@@ -431,8 +419,8 @@ function ov25_woo_extension_init() {
 					'swatchProductId' => ov25_get_swatch_product_id(),
 					'restBase' => esc_url_raw( get_rest_url() ),
 					'createSwatchCartUrl' => esc_url_raw( get_rest_url( null, 'ov25/v1/create-swatch-cart' ) ),
-					// New JSON config fields
-					'configuratorConfig' => json_decode( get_option( 'ov25_configurator_config', '{}' ), true ),
+					'useSimpleConfigureButton' => get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes',
+					'configuratorConfig' => ov25_get_storefront_configurator_config(),
 					'productConfig' => ( $use_custom === 'yes' )
 						? json_decode( $product->get_meta( '_ov25_configurator_config', true ) ?: '{}', true )
 						: null,
@@ -770,26 +758,76 @@ function ov25_get_product_images() {
 }
 
 /**
- * Add Ov25 settings tab to WooCommerce.
+ * Default configurator layout block — matches ov25-setup DEFAULT_TYPE_SETTINGS export shape.
  */
-function ov25_woo_extension_add_settings( $settings ) {
-	try {
-		// Include settings page class
-		$settings_file = dirname( __FILE__ ) . '/includes/class-wc-settings-ov25.php';
-		if ( file_exists( $settings_file ) ) {
-			include_once $settings_file;
-			
-			// Add settings tab
-			if ( class_exists( 'WC_Settings_Ov25' ) ) {
-				$settings[] = new WC_Settings_Ov25();
-			}
-		}
-		
-		return $settings;
-	} catch ( Exception $e ) {
-		error_log( 'OV25 Woo Extension: Error adding settings - ' . $e->getMessage() );
-		return $settings;
+function ov25_default_configurator_layout_block() {
+	return array(
+		'carousel'     => array(
+			'desktop'   => 'stacked',
+			'mobile'    => 'carousel',
+			'maxImages' => array(
+				'desktop' => 4,
+				'mobile'  => 6,
+			),
+		),
+		'configurator' => array(
+			'displayMode'  => array(
+				'desktop' => 'sheet',
+				'mobile'  => 'drawer',
+			),
+			'triggerStyle' => array(
+				'desktop' => 'single-button',
+				'mobile'  => 'single-button',
+			),
+			'variants'     => array(
+				'displayMode'               => array(
+					'desktop' => 'tree',
+					'mobile'  => 'list',
+				),
+				'useSimpleVariantsSelector' => true,
+			),
+		),
+		'flags'        => array(
+			'hidePricing'  => false,
+			'hideAr'       => false,
+			'deferThreeD'  => false,
+			'showOptional' => false,
+			'forceMobile'  => false,
+			'autoOpen'     => false,
+		),
+	);
+}
+
+/**
+ * Full global configurator config (standard + snap2) when none is stored yet.
+ */
+function ov25_default_configurator_config_array() {
+	$block = ov25_default_configurator_layout_block();
+	return array(
+		'standard' => $block,
+		'snap2'    => $block,
+	);
+}
+
+/**
+ * Config passed to the storefront: stored JSON merged with per-layout defaults.
+ */
+function ov25_get_storefront_configurator_config() {
+	$raw  = get_option( 'ov25_configurator_config', '{}' );
+	$data = json_decode( $raw, true );
+	if ( ! is_array( $data ) ) {
+		$data = array();
 	}
+	if ( empty( $data ) ) {
+		return ov25_default_configurator_config_array();
+	}
+	$defaults = ov25_default_configurator_config_array();
+	foreach ( array( 'standard', 'snap2' ) as $layout ) {
+		if ( empty( $data[ $layout ] ) || ! is_array( $data[ $layout ] ) ) {
+			$data[ $layout ] = $defaults[ $layout ];
+		}
+	}
+	return $data;
 }
 
 /**

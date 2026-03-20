@@ -3,15 +3,6 @@ import * as OV25 from 'ov25-ui-react18';
 declare global {
     interface Window {
         ov25Settings: {
-            // Legacy flat settings
-            logoURL: string;
-            mobileLogoURL: string;
-            autoCarousel: boolean;
-            deferThreeD: boolean;
-            showOptional: boolean;
-            hideAr: boolean;
-            useInlineVariantControls: boolean;
-            useSimpleConfigureButton: boolean;
             images: string[];
             gallerySelector: string;
             variantsSelector: string;
@@ -22,7 +13,7 @@ declare global {
             swatchProductId?: string;
             restBase?: string;
             createSwatchCartUrl?: string;
-            // New JSON config
+            useSimpleConfigureButton?: boolean;
             configuratorConfig?: Record<string, SerializableInjectConfig>;
             productConfig?: Record<string, SerializableInjectConfig> | null;
             useCustomConfig?: boolean;
@@ -106,7 +97,7 @@ function getLayoutType(productLink: string): 'snap2' | 'standard' {
 }
 
 /**
- * Build inject config from the new JSON config, falling back to legacy flat settings.
+ * Build inject config from global + optional product Configurator Setup (ov25-setup) JSON.
  */
 function buildConfig(): Record<string, unknown> {
     const s = window.ov25Settings;
@@ -120,10 +111,21 @@ function buildConfig(): Record<string, unknown> {
     const apiKey = firstSlash !== -1 ? data.substring(0, firstSlash) : data;
     const productLink = firstSlash !== -1 ? data.substring(firstSlash + 1) : '';
 
-    const hasJsonConfig = s.configuratorConfig && Object.keys(s.configuratorConfig).length > 0;
+    const layoutType = getLayoutType(productLink);
+    const base =
+        (s.configuratorConfig?.[layoutType] || s.configuratorConfig?.['standard'] || {}) as SerializableInjectConfig;
+    let config = { ...base } as SerializableInjectConfig;
 
-    // WooCommerce selectors: manual Global Settings value, or WooCommerce defaults.
-    // These always override JSON config selectors (which use platform defaults like .configurator-container).
+    if (s.useCustomConfig && s.productConfig) {
+        const productOverride = s.productConfig[layoutType] || s.productConfig['standard'];
+        if (productOverride && typeof productOverride === 'object') {
+            config = deepMerge(
+                config as Record<string, unknown>,
+                productOverride as Record<string, unknown>,
+            ) as SerializableInjectConfig;
+        }
+    }
+
     const selectorOverrides: Record<string, unknown> = {
         gallerySelector: { id: s.gallerySelector || '.woocommerce-product-gallery', replace: true },
         variantsSelector: s.variantsSelector || '[data-ov25-variants]',
@@ -134,89 +136,104 @@ function buildConfig(): Record<string, unknown> {
         selectorOverrides.configureButtonSelector = { id: s.configureButtonSelector.trim(), replace: true };
     }
 
-    if (hasJsonConfig && s.configuratorConfig) {
-        const layoutType = getLayoutType(productLink);
-        let config = s.configuratorConfig[layoutType] || s.configuratorConfig['standard'] || {};
-
-        if (s.useCustomConfig && s.productConfig) {
-            const productOverride = s.productConfig[layoutType] || s.productConfig['standard'];
-            if (productOverride) {
-                config = deepMerge(config as Record<string, unknown>, productOverride as Record<string, unknown>) as SerializableInjectConfig;
-            }
-        }
-
-        return {
-            apiKey,
-            productLink,
-            images: s.images || [],
-            ...buildInjectFromSerializable(config),
-            ...selectorOverrides,
-        };
-    }
-
-    return {
+    const out: Record<string, unknown> = {
         apiKey,
         productLink,
-        gallerySelector: selectorOverrides.gallerySelector || { id: '.woocommerce-product-gallery', replace: true },
-        variantsSelector: selectorOverrides.variantsSelector || '[data-ov25-variants]',
-        ...(s.useSimpleConfigureButton && {
-            useSimpleVariantsSelector: true,
-            configureButtonSelector: selectorOverrides.configureButtonSelector || { id: '[data-ov25-configure-button]', replace: true },
-        }),
-        swatchesSelector: selectorOverrides.swatchesSelector || '[data-ov25-swatches]',
-        priceSelector: selectorOverrides.priceSelector || '[data-ov25-price]',
         images: s.images || [],
-        logoURL: s.logoURL || '',
-        mobileLogoURL: s.mobileLogoURL || undefined,
-        carouselSelector: s.autoCarousel || false,
-        deferThreeD: s.deferThreeD || false,
-        showOptional: s.showOptional || false,
-        hideAr: s.hideAr || false,
-        configuratorDisplayMode: s.useInlineVariantControls ? 'inline' : 'drawer',
-        cssString: s.customCSS || '',
+        ...flatSelectorsFromSerializable(config),
+        ...serializableToLegacyInjectFields(config),
+        ...selectorOverrides,
     };
+
+    const extraCss = s.customCSS?.trim();
+    if (extraCss && !out.cssString && !(config.branding?.cssString && String(config.branding.cssString).trim())) {
+        out.cssString = extraCss;
+    }
+
+    if (s.useSimpleConfigureButton) {
+        out.useSimpleVariantsSelector = true;
+        out.configureButtonSelector =
+            selectorOverrides.configureButtonSelector || { id: '[data-ov25-configure-button]', replace: true };
+    }
+
+    return out;
+}
+
+function flatSelectorsFromSerializable(config: SerializableInjectConfig): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+    if (!config.selectors) return result;
+
+    for (const [key, val] of Object.entries(config.selectors)) {
+        if (typeof val === 'object' && val !== null && 'selector' in val) {
+            const v = val as { selector: string; replace?: boolean };
+            result[key === 'gallery' ? 'gallerySelector' : `${key}Selector`] = { id: v.selector, replace: v.replace };
+        } else if (typeof val === 'string') {
+            result[key === 'gallery' ? 'gallerySelector' : `${key}Selector`] = val;
+        }
+    }
+    return result;
 }
 
 /**
- * Convert SerializableInjectConfig to the flat shape expected by OV25.injectConfigurator.
+ * Maps ov25-setup / Configurator Setup JSON into legacy flat inject fields read by
+ * normalizeInjectConfig when options are not grouped (no `callbacks` wrapper).
  */
-function buildInjectFromSerializable(config: SerializableInjectConfig): Record<string, unknown> {
+function serializableToLegacyInjectFields(config: SerializableInjectConfig): Record<string, unknown> {
     const result: Record<string, unknown> = {};
 
-    if (config.selectors) {
-        for (const [key, val] of Object.entries(config.selectors)) {
-            if (typeof val === 'object' && val !== null && 'selector' in val) {
-                result[key === 'gallery' ? 'gallerySelector' : `${key}Selector`] = { id: val.selector, replace: val.replace };
-            } else if (typeof val === 'string') {
-                result[key === 'gallery' ? 'gallerySelector' : `${key}Selector`] = val;
-            }
-        }
+    const car = config.carousel;
+    if (car?.desktop) {
+        result.carouselDisplayMode = car.desktop;
+    }
+    if (car?.mobile) {
+        result.carouselDisplayModeMobile = car.mobile;
     }
 
-    if (config.carousel) {
-        result['carouselSelector'] = config.carousel.desktop !== 'none';
+    const conf = config.configurator;
+    if (conf?.displayMode) {
+        const dm = conf.displayMode;
+        if (dm.desktop) {
+            result.configuratorDisplayMode = dm.desktop;
+        }
+        if (dm.mobile) {
+            result.configuratorDisplayModeMobile = dm.mobile;
+        }
     }
-
-    if (config.configurator) {
-        const dm = config.configurator.displayMode;
-        if (dm) {
-            result['configuratorDisplayMode'] = dm.desktop === 'inline' ? 'inline' : dm.desktop === 'sheet' ? 'drawer' : dm.desktop;
+    if (conf?.triggerStyle) {
+        if (conf.triggerStyle.desktop) {
+            result.configuratorTriggerStyle = conf.triggerStyle.desktop;
         }
-        if (config.configurator.variants?.useSimpleVariantsSelector) {
-            result['useSimpleVariantsSelector'] = true;
+        if (conf.triggerStyle.mobile) {
+            result.configuratorTriggerStyleMobile = conf.triggerStyle.mobile;
         }
+    }
+    if (conf?.variants?.displayMode) {
+        const vdm = conf.variants.displayMode;
+        if (vdm.desktop) {
+            result.variantDisplayMode = vdm.desktop;
+        }
+        if (vdm.mobile) {
+            result.variantDisplayModeMobile = vdm.mobile;
+        }
+    }
+    if (conf?.variants && conf.variants.useSimpleVariantsSelector !== undefined) {
+        result.useSimpleVariantsSelector = conf.variants.useSimpleVariantsSelector;
     }
 
     if (config.flags) {
-        for (const [key, val] of Object.entries(config.flags)) {
-            result[key] = val;
-        }
+        Object.assign(result, config.flags);
     }
 
     if (config.branding) {
-        if (config.branding.logoURL) result['logoURL'] = config.branding.logoURL;
-        if (config.branding.mobileLogoURL) result['mobileLogoURL'] = config.branding.mobileLogoURL;
-        if (config.branding.cssString) result['cssString'] = config.branding.cssString;
+        if (config.branding.logoURL) {
+            result.logoURL = config.branding.logoURL;
+        }
+        if (config.branding.mobileLogoURL) {
+            result.mobileLogoURL = config.branding.mobileLogoURL;
+        }
+        if (config.branding.cssString) {
+            result.cssString = config.branding.cssString;
+        }
     }
 
     return result;
