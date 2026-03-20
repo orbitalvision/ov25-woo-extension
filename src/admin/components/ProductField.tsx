@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ConfiguratorSetup, type ConfiguratorSetupPayload } from 'ov25-setup';
 import 'ov25-setup/index.css';
 import { api } from '../lib/api';
+import { useSettingsContext } from '../context/SettingsContext';
+import { resolveConfiguratorConfig } from '../lib/resolve-configurator-config';
 
 interface Range {
   id: number;
@@ -66,6 +68,11 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
 
   const admin = (window as any).ov25Admin;
+  const { settings } = useSettingsContext();
+  const globalConfiguratorConfig = useMemo(
+    () => resolveConfiguratorConfig(settings?.configuratorConfig, admin?.configuratorConfig),
+    [settings?.configuratorConfig, admin?.configuratorConfig],
+  );
 
   useEffect(() => {
     api.getProductsList()
@@ -380,10 +387,8 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
           </div>
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <ConfiguratorSetup
-              apiKey={admin?.apiKey}
-              initialConfig={Object.keys(config).length > 0 ? config : (admin?.configuratorConfig || {})}
+              initialConfig={Object.keys(config).length > 0 ? config : globalConfiguratorConfig}
               onSave={handleConfigSave}
-              onReset={() => admin?.configuratorConfig || {}}
               className="h-full flex"
             />
           </div>

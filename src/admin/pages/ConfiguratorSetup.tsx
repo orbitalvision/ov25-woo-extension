@@ -1,24 +1,29 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { ConfiguratorSetup, type ConfiguratorSetupPayload } from 'ov25-setup';
 import 'ov25-setup/index.css';
-import { api } from '../lib/api';
+import { useSettingsContext } from '../context/SettingsContext';
+import { resolveConfiguratorConfig } from '../lib/resolve-configurator-config';
 
 export function ConfiguratorSetupPage() {
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false);
   const admin = window.ov25Admin;
-  const currentConfig = (admin?.configuratorConfig || {}) as ConfiguratorSetupPayload;
+  const { settings, saveSettings } = useSettingsContext();
+  const currentConfig = useMemo(
+    () => resolveConfiguratorConfig(settings?.configuratorConfig, admin?.configuratorConfig),
+    [settings?.configuratorConfig, admin?.configuratorConfig],
+  );
 
   const handleSave = useCallback(async (payload: ConfiguratorSetupPayload) => {
     try {
-      await api.saveSettings({ configuratorConfig: payload });
+      await saveSettings({ configuratorConfig: payload });
       admin.configuratorConfig = payload as Record<string, unknown>;
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       console.error('Failed to save configurator config:', err);
     }
-  }, [admin]);
+  }, [admin, saveSettings]);
 
   return (
     <div className="ov25-page">
@@ -44,7 +49,6 @@ export function ConfiguratorSetupPage() {
           </div>
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <ConfiguratorSetup
-              apiKey={admin?.apiKey}
               initialConfig={currentConfig}
               onSave={handleSave}
               className="h-full flex"
