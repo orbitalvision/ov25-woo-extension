@@ -79,6 +79,7 @@ class OV25_Admin_API {
 			'swatchesShowInNav'  => get_option( 'ov25_swatches_show_in_nav', 'no' ),
 			'swatchesTestMode'   => get_option( 'ov25_swatches_test_mode', 'no' ),
 			'useSimpleConfigureButton' => get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes',
+			'disableCartFormHiding' => get_option( 'ov25_disable_cart_form_hiding', 'no' ) === 'yes',
 		) );
 	}
 
@@ -111,6 +112,7 @@ class OV25_Admin_API {
 			'showSwatchesPage'  => 'ov25_show_swatches_page',
 			'swatchesShowInNav' => 'ov25_swatches_show_in_nav',
 			'swatchesTestMode'  => 'ov25_swatches_test_mode',
+			'disableCartFormHiding' => 'ov25_disable_cart_form_hiding',
 		);
 
 		foreach ( $yesno_options as $key => $option_name ) {

@@ -22,9 +22,11 @@ declare global {
             ajaxUrl?: string;
             addToCartNonce?: string;
             wcProductId?: number;
+            disableCartFormHiding?: boolean;
         };
         ov25GenerateThumbnail: () => Promise<string>;
         ov25OpenConfigurator?: () => void;
+        ov25CloseConfigurator?: () => void;
     }
 }
 
@@ -418,6 +420,14 @@ async function submitProductCartWithThumbnail(payload: OnChangePayload | undefin
         ...summarizeCommercePayload(payload),
     });
 
+    if (typeof window.ov25CloseConfigurator === 'function') {
+        try {
+            window.ov25CloseConfigurator();
+        } catch (error) {
+            console.warn(OV25_WOO_LOG, `${action}: ov25CloseConfigurator failed`, error);
+        }
+    }
+
     try {
         const response = await fetch(getOv25AjaxCartUrl(), {
             method: 'POST',
@@ -433,8 +443,12 @@ async function submitProductCartWithThumbnail(payload: OnChangePayload | undefin
             | { success?: boolean; data?: { redirect_url?: string; message?: string } }
             | null;
 
-        if (result?.success && result.data?.redirect_url) {
-            window.location.href = result.data.redirect_url;
+        if (result?.success) {
+            if (result.data?.redirect_url) {
+                window.location.href = result.data.redirect_url;
+            } else if (!redirectToCheckout) {
+                window.location.reload();
+            }
             return;
         }
 
@@ -801,7 +815,7 @@ function scheduleOv25NativeProductFormRemoval(): void {
     window.setTimeout(() => obs.disconnect(), 15000);
 }
 
-if (window.ov25Settings?.wcProductId) {
+if (window.ov25Settings?.wcProductId && !window.ov25Settings?.disableCartFormHiding) {
     ensureOv25NativeAtcHideStyles();
     removeNativeWooProductForms();
     if (document.readyState !== 'loading') scheduleOv25NativeProductFormRemoval();

@@ -137,7 +137,6 @@ function ov25_woo_extension_init() {
 		add_action( 'init', 'ov25_ensure_swatch_product_exists' );
 		add_action( 'init', 'ov25_ensure_swatches_page_exists' );
 		add_action( 'template_redirect', 'ov25_swatches_plain_permalink_redirect' );
-		add_action( 'template_redirect', 'ov25_maybe_restore_original_cart_on_navigation' );
 
 		$loop_button_file = dirname( MAIN_PLUGIN_FILE ) . '/includes/class-loop-button-hook.php';
 		if ( file_exists( $loop_button_file ) ) {
@@ -165,9 +164,12 @@ function ov25_woo_extension_init() {
 						return;
 					}
 
-					wp_register_style( 'ov25-native-atc-hide', false );
-					wp_enqueue_style( 'ov25-native-atc-hide' );
-					wp_add_inline_style( 'ov25-native-atc-hide', ov25_get_hide_native_add_to_cart_css() );
+					$disable_cart_form_hiding = get_option( 'ov25_disable_cart_form_hiding', 'no' ) === 'yes';
+					if ( ! $disable_cart_form_hiding ) {
+						wp_register_style( 'ov25-native-atc-hide', false );
+						wp_enqueue_style( 'ov25-native-atc-hide' );
+						wp_add_inline_style( 'ov25-native-atc-hide', ov25_get_hide_native_add_to_cart_css() );
+					}
 
 					$asset_file = plugin_dir_path( MAIN_PLUGIN_FILE ) . 'build/frontend.asset.php';
 					$asset      = array( 'dependencies' => array(), 'version' => '1.0.0' );
@@ -211,6 +213,7 @@ function ov25_woo_extension_init() {
 								'ajaxUrl'                   => admin_url( 'admin-ajax.php' ),
 								'addToCartNonce'            => wp_create_nonce( 'ov25_add_to_cart' ),
 								'wcProductId'               => (int) $product->get_id(),
+								'disableCartFormHiding'     => $disable_cart_form_hiding,
 							)
 						);
 					}

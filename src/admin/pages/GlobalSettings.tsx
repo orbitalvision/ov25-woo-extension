@@ -117,6 +117,7 @@ export function GlobalSettings() {
   ];
 
   const useSimpleConfigure = merged.useSimpleConfigureButton === true || merged.useSimpleConfigureButton === 'yes';
+  const disableCartFormHiding = merged.disableCartFormHiding === true || merged.disableCartFormHiding === 'yes';
 
   return (
     <div className="ov25-page">
@@ -163,6 +164,17 @@ export function GlobalSettings() {
               onChange={(e) => handleChange('useSimpleConfigureButton', e.target.checked)}
             />
             Use simple configure button (single CONFIGURE control instead of inline variants)
+          </label>
+        </div>
+        <div className="ov25-field">
+          <label htmlFor="ov25-disable-cart-form-hiding" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+            <input
+              id="ov25-disable-cart-form-hiding"
+              type="checkbox"
+              checked={disableCartFormHiding}
+              onChange={(e) => handleChange('disableCartFormHiding', e.target.checked)}
+            />
+            Disable cart form hiding
           </label>
         </div>
         {fields.map(({ key, label, type, placeholder }) => (

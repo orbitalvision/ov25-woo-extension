@@ -1,6 +1,6 @@
 <?php
 /**
- * Swatch product, Swatches page, plain-permalink redirect, cart restore after swatch checkout flow.
+ * Swatch product, Swatches page, and plain-permalink redirect helpers.
  *
  * @package extension
  */
@@ -185,76 +185,3 @@ function ov25_swatches_plain_permalink_redirect() {
 	exit;
 }
 
-/**
- * If the session indicates we’re in a swatch-only flow and the user visits any
- * non-checkout/non-order-pay page, restore the original cart and clear flags.
- */
-function ov25_maybe_restore_original_cart_on_navigation() {
-	if ( ! WC()->session || ! WC()->session->get( 'ov25_swatch_only_cart' ) ) {
-		return;
-	}
-
-	if ( function_exists( 'is_checkout' ) && is_checkout() ) {
-		return;
-	}
-	if ( isset( $_GET['pay_for_order'] ) || isset( $_GET['order-pay'] ) ) {
-		return;
-	}
-
-	$original_cart = WC()->session->get( 'ov25_original_cart' );
-	WC()->cart->empty_cart();
-	if ( is_array( $original_cart ) ) {
-		foreach ( $original_cart as $item ) {
-			$product_id     = isset( $item['product_id'] ) ? (int) $item['product_id'] : 0;
-			$quantity       = isset( $item['quantity'] ) ? (int) $item['quantity'] : 1;
-			$variation_id   = isset( $item['variation_id'] ) ? (int) $item['variation_id'] : 0;
-			$variation      = isset( $item['variation'] ) && is_array( $item['variation'] ) ? $item['variation'] : array();
-			$cart_item_data = ov25_extract_cart_item_custom_data( $item );
-			WC()->cart->add_to_cart( $product_id, $quantity, $variation_id, $variation, $cart_item_data );
-		}
-	}
-	WC()->session->set( 'ov25_swatch_only_cart', false );
-	WC()->session->set( 'ov25_original_cart', null );
-}
-
-/**
- * Extract custom cart item data from a saved cart line for re-adding to cart.
- * Copies OV25-specific keys and any non-reserved custom keys.
- *
- * @param array<string, mixed> $item Saved cart line.
- * @return array<string, mixed>
- */
-function ov25_extract_cart_item_custom_data( $item ) {
-	if ( ! is_array( $item ) ) {
-		return array();
-	}
-
-	$reserved_keys = array(
-		'key',
-		'product_id',
-		'variation_id',
-		'variation',
-		'quantity',
-		'data',
-		'data_hash',
-		'line_total',
-		'line_tax',
-		'line_subtotal',
-		'line_subtotal_tax',
-		'line_tax_data',
-	);
-
-	$cart_item_data = array();
-
-	foreach ( $item as $key => $value ) {
-		if ( strpos( $key, 'cfg_' ) === 0 || strpos( $key, 'swatch_' ) === 0 || strpos( $key, 'ov25-' ) === 0 ) {
-			$cart_item_data[ $key ] = $value;
-			continue;
-		}
-		if ( ! in_array( $key, $reserved_keys, true ) ) {
-			$cart_item_data[ $key ] = $value;
-		}
-	}
-
-	return $cart_item_data;
-}

@@ -167,13 +167,12 @@ class OV25_Ajax_Cart {
 			wp_send_json_error( array( 'message' => $message ) );
 		}
 
-		$redirect_url = $is_buy_now ? wc_get_checkout_url() : wc_get_cart_url();
+		$response = array();
+		if ( $is_buy_now ) {
+			$response['redirect_url'] = wc_get_checkout_url();
+		}
 
-		wp_send_json_success(
-			array(
-				'redirect_url' => $redirect_url,
-			)
-		);
+		wp_send_json_success( $response );
 	}
 
 	/**
@@ -422,13 +421,12 @@ class OV25_Ajax_Cart {
 			$added_keys[] = $key;
 		}
 
-		$redirect_url = $is_buy_now ? wc_get_checkout_url() : wc_get_cart_url();
+		$response = array();
+		if ( $is_buy_now ) {
+			$response['redirect_url'] = wc_get_checkout_url();
+		}
 
-		wp_send_json_success(
-			array(
-				'redirect_url' => $redirect_url,
-			)
-		);
+		wp_send_json_success( $response );
 	}
 
 	/**

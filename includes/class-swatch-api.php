@@ -141,7 +141,7 @@ if ( ! class_exists( 'OV25_Swatch_API' ) ) {
 		}
 
 		/**
-		 * Create a swatch-only cart.
+		 * Create a swatch cart by replacing the current cart contents.
 		 */
 		public static function create_swatch_cart( WP_REST_Request $request ) {
 			// Verify WooCommerce is loaded
@@ -160,10 +160,6 @@ if ( ! class_exists( 'OV25_Swatch_API' ) ) {
 					return new WP_Error( 'invalid_swatch_data', 'No swatch data provided', [ 'status' => 400 ] );
 				}
 
-				// Store current cart contents to restore later
-				$current_cart = WC()->cart->get_cart();
-				WC()->session->set( 'ov25_original_cart', $current_cart );
-				
 				// Clear the main cart
 				WC()->cart->empty_cart();
 				
@@ -190,9 +186,6 @@ if ( ! class_exists( 'OV25_Swatch_API' ) ) {
 					
 					WC()->cart->add_to_cart( $product_id, 1, 0, array(), $cart_item_data );
 				}
-				
-				// Mark this as a swatch-only cart
-				WC()->session->set( 'ov25_swatch_only_cart', true );
 				
 				// Return the correct checkout URL (respects permalinks/settings)
 				$checkout_url = function_exists( 'wc_get_checkout_url' ) ? wc_get_checkout_url() : home_url( '/checkout/' );
