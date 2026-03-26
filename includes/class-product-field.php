@@ -11,6 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
+
 class OV25_Product_Field {
 
 	public static function init() {
