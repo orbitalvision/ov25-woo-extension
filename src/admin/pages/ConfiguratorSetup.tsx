@@ -65,11 +65,20 @@ export function ConfiguratorSetupPage() {
             {saved && <span style={{ fontSize: '13px', color: '#00a32a', fontWeight: 600 }}>Saved!</span>}
             <button type="button" className="button" onClick={() => setOpen(false)}>Close</button>
           </div>
-          <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             {editorMountKey && (
               <ConfiguratorSetup
                 key={editorMountKey}
                 onSave={handleSave}
+                className="h-full min-h-0 w-full flex"
               />
             )}
           </div>

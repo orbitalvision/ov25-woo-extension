@@ -412,11 +412,20 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
             {saveStatus === 'error' && <span style={{ fontSize: '13px', color: '#b32d2e', fontWeight: 600 }}>Save failed</span>}
             <button type="button" className="button" onClick={() => setModalOpen(false)}>Close</button>
           </div>
-          <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             {editorMountKey && (
               <ConfiguratorSetup
                 key={editorMountKey}
                 onSave={handleConfigSave}
+                className="h-full min-h-0 w-full flex"
               />
             )}
           </div>
