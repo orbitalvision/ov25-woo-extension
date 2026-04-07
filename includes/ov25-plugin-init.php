@@ -165,7 +165,9 @@ function ov25_woo_extension_init() {
 					}
 
 					$disable_cart_form_hiding = get_option( 'ov25_disable_cart_form_hiding', 'no' ) === 'yes';
-					if ( ! $disable_cart_form_hiding ) {
+					$use_native_cart_submit     = get_option( 'ov25_use_native_cart_submit', 'no' ) === 'yes';
+					$keep_native_cart_form      = $disable_cart_form_hiding || $use_native_cart_submit;
+					if ( ! $keep_native_cart_form ) {
 						wp_register_style( 'ov25-native-atc-hide', false );
 						wp_enqueue_style( 'ov25-native-atc-hide' );
 						wp_add_inline_style( 'ov25-native-atc-hide', ov25_get_hide_native_add_to_cart_css() );
@@ -214,6 +216,7 @@ function ov25_woo_extension_init() {
 								'addToCartNonce'            => wp_create_nonce( 'ov25_add_to_cart' ),
 								'wcProductId'               => (int) $product->get_id(),
 								'disableCartFormHiding'     => $disable_cart_form_hiding,
+								'useNativeCartSubmit'       => $use_native_cart_submit,
 							)
 						);
 					}

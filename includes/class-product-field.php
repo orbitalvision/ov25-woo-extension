@@ -87,10 +87,10 @@ class OV25_Product_Field {
 		if ( isset( $_POST['_ov25_configurator_config'] ) ) {
 			$raw     = wp_unslash( $_POST['_ov25_configurator_config'] );
 			$decoded = json_decode( $raw, true );
-			$product->update_meta_data(
-				'_ov25_configurator_config',
-				$decoded !== null ? wp_json_encode( $decoded ) : '{}'
-			);
+			if ( JSON_ERROR_NONE === json_last_error() && is_array( $decoded ) ) {
+				$product->update_meta_data( '_ov25_configurator_config', wp_json_encode( $decoded ) );
+			}
+			// If decode fails (truncated hidden field, bad POST, etc.), keep existing meta — do not overwrite with {}.
 		}
 	}
 

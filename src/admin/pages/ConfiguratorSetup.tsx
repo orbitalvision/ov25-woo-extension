@@ -1,23 +1,41 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { ConfiguratorSetup, type ConfiguratorSetupPayload } from 'ov25-setup';
 import 'ov25-setup/index.css';
 import { useSettingsContext } from '../context/SettingsContext';
 import { resolveConfiguratorConfig } from '../lib/resolve-configurator-config';
+import {
+  mergeConfiguratorPayloadWithStoredFormState,
+  syncConfiguratorFormStateFromSavedJson,
+} from '../lib/configurator-setup-local-storage';
 
 export function ConfiguratorSetupPage() {
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [editorMountKey, setEditorMountKey] = useState<string | null>(null);
   const admin = window.ov25Admin;
   const { settings, saveSettings } = useSettingsContext();
-  const currentConfig = useMemo(
-    () => resolveConfiguratorConfig(settings?.configuratorConfig, admin?.configuratorConfig),
-    [settings?.configuratorConfig, admin?.configuratorConfig],
-  );
+  const rawSavedConfig = useMemo((): Record<string, unknown> => {
+    const resolved = resolveConfiguratorConfig(settings?.configuratorConfig, admin?.configuratorConfig);
+    return resolved as Record<string, unknown>;
+  }, [settings?.configuratorConfig, admin?.configuratorConfig]);
+
+  useEffect(() => {
+    if (!open) {
+      setEditorMountKey(null);
+      return;
+    }
+    syncConfiguratorFormStateFromSavedJson(rawSavedConfig);
+    const id = requestAnimationFrame(() => {
+      setEditorMountKey(`ov25-configurator-setup-${Date.now()}`);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [open, rawSavedConfig]);
 
   const handleSave = useCallback(async (payload: ConfiguratorSetupPayload) => {
     try {
-      await saveSettings({ configuratorConfig: payload });
-      admin.configuratorConfig = payload as Record<string, unknown>;
+      const merged = mergeConfiguratorPayloadWithStoredFormState(payload);
+      await saveSettings({ configuratorConfig: merged });
+      admin.configuratorConfig = merged;
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -47,12 +65,13 @@ export function ConfiguratorSetupPage() {
             {saved && <span style={{ fontSize: '13px', color: '#00a32a', fontWeight: 600 }}>Saved!</span>}
             <button type="button" className="button" onClick={() => setOpen(false)}>Close</button>
           </div>
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <ConfiguratorSetup
-              initialConfig={currentConfig}
-              onSave={handleSave}
-              className="h-full flex"
-            />
+          <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
+            {editorMountKey && (
+              <ConfiguratorSetup
+                key={editorMountKey}
+                onSave={handleSave}
+              />
+            )}
           </div>
         </div>
       )}

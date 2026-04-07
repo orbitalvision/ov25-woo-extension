@@ -23,6 +23,8 @@ declare global {
             addToCartNonce?: string;
             wcProductId?: number;
             disableCartFormHiding?: boolean;
+            /** When true, add to cart POSTs the real form.cart (native attribute_* / variation_id). */
+            useNativeCartSubmit?: boolean;
         };
         ov25GenerateThumbnail: () => Promise<string>;
         ov25OpenConfigurator?: () => void;
@@ -312,6 +314,12 @@ function scrapeFormCartOverrides(form: HTMLFormElement | null): ScrapedFormCart 
     return { quantity, variation_id, variation, itemFields };
 }
 
+function keepWooCommerceCartFormVisible(): boolean {
+    const s = window.ov25Settings;
+    if (!s) return false;
+    return !!(s.disableCartFormHiding || s.useNativeCartSubmit);
+}
+
 function getOv25AjaxCartUrl(): string {
     const base = window.ov25Settings?.ajaxUrl || '/wp-admin/admin-ajax.php';
     const sep = base.includes('?') ? '&' : '?';
@@ -461,6 +469,68 @@ async function submitProductCartWithThumbnail(payload: OnChangePayload | undefin
     } catch (error) {
         console.error(OV25_WOO_LOG, `${action}: cart AJAX network error`, error);
     }
+}
+
+/**
+ * Merges OV25 cfg_* fields into form.cart and invokes the theme’s real submit control so
+ * WooCommerce receives native attribute_* / variation_id alongside OV25 cart item data.
+ */
+async function submitProductCartViaNativeForm(payload: OnChangePayload | undefined, redirectToCheckout: boolean): Promise<void> {
+    const action = redirectToCheckout ? 'buyNow' : 'addToBasket';
+    console.log(OV25_WOO_LOG, `${action}: submitProductCartViaNativeForm start`, {
+        redirectToCheckout,
+        ...summarizeCommercePayload(payload),
+    });
+
+    const form = document.querySelector('form.cart') as HTMLFormElement | null;
+    if (!form) {
+        console.warn(OV25_WOO_LOG, `${action}: form.cart not found — using AJAX cart`);
+        await submitProductCartWithThumbnail(payload, redirectToCheckout);
+        return;
+    }
+
+    if (payload) {
+        applyOnChangePayloadToForm(form, payload);
+    }
+
+    const scrapedForQty = scrapeFormCartOverrides(form);
+    const wooQty = resolveWooCartItemQuantity(payload, scrapedForQty.quantity);
+    const qtyEl =
+        (form.querySelector('input[name="quantity"]') as HTMLInputElement | null) ||
+        (form.querySelector('input.qty') as HTMLInputElement | null);
+    if (qtyEl) {
+        qtyEl.value = String(wooQty);
+    }
+
+    try {
+        const screenshotUrl = await window.ov25GenerateThumbnail();
+        ensureCartField(form, 'ov25-thumbnail').value = screenshotUrl;
+    } catch (error) {
+        console.error(OV25_WOO_LOG, `${action}: thumbnail failed`, error);
+    }
+
+    ensureCartField(form, 'ov25_redirect_checkout').value = redirectToCheckout ? '1' : '';
+
+    logFormCartSnapshot(form, 'before native submit');
+
+    if (typeof window.ov25CloseConfigurator === 'function') {
+        try {
+            window.ov25CloseConfigurator();
+        } catch (error) {
+            console.warn(OV25_WOO_LOG, `${action}: ov25CloseConfigurator failed`, error);
+        }
+    }
+
+    const submitEl =
+        (form.querySelector('button[type="submit"]') as HTMLButtonElement | null) ||
+        (form.querySelector('input[type="submit"]') as HTMLInputElement | null);
+    if (!submitEl) {
+        console.warn(OV25_WOO_LOG, `${action}: no submit in form.cart — using AJAX cart`);
+        await submitProductCartWithThumbnail(payload, redirectToCheckout);
+        return;
+    }
+
+    submitEl.click();
 }
 
 export interface Swatch {
@@ -663,14 +733,22 @@ const doInject = () => {
         ...config,
         addToBasketFunction: async (payload?: OnChangePayload) => {
             try {
-                await submitProductCartWithThumbnail(payload, false);
+                if (window.ov25Settings?.useNativeCartSubmit) {
+                    await submitProductCartViaNativeForm(payload, false);
+                } else {
+                    await submitProductCartWithThumbnail(payload, false);
+                }
             } catch (e) {
                 console.error(OV25_WOO_LOG, 'addToBasketFunction rejected', e);
             }
         },
         buyNowFunction: async (payload?: OnChangePayload) => {
             try {
-                await submitProductCartWithThumbnail(payload, true);
+                if (window.ov25Settings?.useNativeCartSubmit) {
+                    await submitProductCartViaNativeForm(payload, true);
+                } else {
+                    await submitProductCartWithThumbnail(payload, true);
+                }
             } catch (e) {
                 console.error(OV25_WOO_LOG, 'buyNowFunction rejected', e);
             }
@@ -815,7 +893,7 @@ function scheduleOv25NativeProductFormRemoval(): void {
     window.setTimeout(() => obs.disconnect(), 15000);
 }
 
-if (window.ov25Settings?.wcProductId && !window.ov25Settings?.disableCartFormHiding) {
+if (window.ov25Settings?.wcProductId && !keepWooCommerceCartFormVisible()) {
     ensureOv25NativeAtcHideStyles();
     removeNativeWooProductForms();
     if (document.readyState !== 'loading') scheduleOv25NativeProductFormRemoval();

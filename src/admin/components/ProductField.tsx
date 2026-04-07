@@ -4,6 +4,10 @@ import 'ov25-setup/index.css';
 import { api } from '../lib/api';
 import { useSettingsContext } from '../context/SettingsContext';
 import { resolveConfiguratorConfig } from '../lib/resolve-configurator-config';
+import {
+  mergeConfiguratorPayloadWithStoredFormState,
+  syncConfiguratorFormStateFromSavedJson,
+} from '../lib/configurator-setup-local-storage';
 
 interface Range {
   id: number;
@@ -64,6 +68,7 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
   const [pickerOpen, setPickerOpen] = useState(false);
   const [manualMode, setManualMode] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editorMountKey, setEditorMountKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
 
@@ -73,6 +78,27 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
     () => resolveConfiguratorConfig(settings?.configuratorConfig, admin?.configuratorConfig),
     [settings?.configuratorConfig, admin?.configuratorConfig],
   );
+
+  const rawEditorConfig = useMemo((): Record<string, unknown> => {
+    const hasCustom =
+      config &&
+      typeof config === 'object' &&
+      Object.keys(config as object).length > 0;
+    const base = hasCustom ? config : globalConfiguratorConfig;
+    return base as Record<string, unknown>;
+  }, [config, globalConfiguratorConfig]);
+
+  useEffect(() => {
+    if (!modalOpen) {
+      setEditorMountKey(null);
+      return;
+    }
+    syncConfiguratorFormStateFromSavedJson(rawEditorConfig);
+    const id = requestAnimationFrame(() => {
+      setEditorMountKey(`ov25-configurator-product-${Date.now()}`);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [modalOpen, rawEditorConfig]);
 
   useEffect(() => {
     api.getProductsList()
@@ -119,13 +145,14 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
     setSaving(true);
     setSaveStatus('idle');
     try {
-      const json = JSON.stringify(payload);
+      const merged = mergeConfiguratorPayloadWithStoredFormState(payload);
+      const json = JSON.stringify(merged);
       syncHidden('_ov25_configurator_config', json);
-      setConfig(payload);
+      setConfig(merged as ConfiguratorSetupPayload);
 
       if (wooProductId) {
         await api.saveProductSettings(parseInt(wooProductId), {
-          configuratorConfig: payload,
+          configuratorConfig: merged,
           useCustomConfig: true,
         });
       }
@@ -385,12 +412,13 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
             {saveStatus === 'error' && <span style={{ fontSize: '13px', color: '#b32d2e', fontWeight: 600 }}>Save failed</span>}
             <button type="button" className="button" onClick={() => setModalOpen(false)}>Close</button>
           </div>
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <ConfiguratorSetup
-              initialConfig={Object.keys(config).length > 0 ? config : globalConfiguratorConfig}
-              onSave={handleConfigSave}
-              className="h-full flex"
-            />
+          <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
+            {editorMountKey && (
+              <ConfiguratorSetup
+                key={editorMountKey}
+                onSave={handleConfigSave}
+              />
+            )}
           </div>
         </div>
       )}

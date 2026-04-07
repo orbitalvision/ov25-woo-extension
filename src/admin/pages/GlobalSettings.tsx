@@ -118,6 +118,7 @@ export function GlobalSettings() {
 
   const useSimpleConfigure = merged.useSimpleConfigureButton === true || merged.useSimpleConfigureButton === 'yes';
   const disableCartFormHiding = merged.disableCartFormHiding === true || merged.disableCartFormHiding === 'yes';
+  const useNativeCartSubmit = merged.useNativeCartSubmit === true || merged.useNativeCartSubmit === 'yes';
 
   return (
     <div className="ov25-page">
@@ -176,6 +177,21 @@ export function GlobalSettings() {
             />
             Disable cart form hiding
           </label>
+        </div>
+        <div className="ov25-field">
+          <label htmlFor="ov25-native-cart-submit" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+            <input
+              id="ov25-native-cart-submit"
+              type="checkbox"
+              checked={useNativeCartSubmit}
+              onChange={(e) => handleChange('useNativeCartSubmit', e.target.checked)}
+            />
+            Submit via WooCommerce cart form (native variations)
+          </label>
+          <p className="ov25-muted" style={{ margin: '0.35rem 0 0 1.5rem', fontSize: '0.9em' }}>
+            Add to cart uses a real <code>form.cart</code> POST with OV25 cfg fields and the customer&apos;s chosen{' '}
+            <code>attribute_*</code> / variation. Keeps theme and third-party variation UX. Implies showing the cart form (same as disabling form hiding).
+          </p>
         </div>
         {fields.map(({ key, label, type, placeholder }) => (
           <div key={key} className="ov25-field">

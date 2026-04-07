@@ -80,11 +80,15 @@ class OV25_Admin_API {
 			'swatchesTestMode'   => get_option( 'ov25_swatches_test_mode', 'no' ),
 			'useSimpleConfigureButton' => get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes',
 			'disableCartFormHiding' => get_option( 'ov25_disable_cart_form_hiding', 'no' ) === 'yes',
+			'useNativeCartSubmit' => get_option( 'ov25_use_native_cart_submit', 'no' ) === 'yes',
 		) );
 	}
 
 	public static function save_settings( $request ) {
 		$params = $request->get_json_params();
+		if ( ! is_array( $params ) ) {
+			$params = array();
+		}
 
 		$text_options = array(
 			'apiKey'             => 'ov25_api_key',
@@ -113,6 +117,7 @@ class OV25_Admin_API {
 			'swatchesShowInNav' => 'ov25_swatches_show_in_nav',
 			'swatchesTestMode'  => 'ov25_swatches_test_mode',
 			'disableCartFormHiding' => 'ov25_disable_cart_form_hiding',
+			'useNativeCartSubmit' => 'ov25_use_native_cart_submit',
 		);
 
 		foreach ( $yesno_options as $key => $option_name ) {
