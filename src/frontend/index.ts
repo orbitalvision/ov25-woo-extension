@@ -578,6 +578,45 @@ function getConfiguratorLayoutBucket(productLink: string): 'snap2' | 'standard' 
     return productLink.startsWith('snap2/') ? 'snap2' : 'standard';
 }
 
+/** Stored-setup keys merged elsewhere or supplied at inject time; omit from `...config` onto inject options. */
+const INJECT_DENYLIST_FROM_STORED_SERIALIZABLE = new Set<string>(['selectors', 'callbacks']);
+
+function omitKeys(obj: Record<string, unknown>, deny: Set<string>): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+    for (const k of Object.keys(obj)) {
+        if (!deny.has(k)) out[k] = obj[k];
+    }
+    return out;
+}
+
+const FLAT_TO_GROUPED_SELECTOR_KEY: ReadonlyArray<[string, string]> = [
+    ['gallery', 'gallerySelector'],
+    ['price', 'priceSelector'],
+    ['name', 'nameSelector'],
+    ['variants', 'variantsSelector'],
+    ['swatches', 'swatchesSelector'],
+    ['configureButton', 'configureButtonSelector'],
+];
+
+function flatSerializableSelectorsToGrouped(flat: Record<string, unknown>): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+    for (const [grouped, flatKey] of FLAT_TO_GROUPED_SELECTOR_KEY) {
+        if (flat[flatKey] !== undefined) out[grouped] = flat[flatKey];
+    }
+    return out;
+}
+
+/** Woo defaults + Configurator Setup `selectors` as the grouped shape `normalizeInjectConfig` expects. */
+function buildMergedGroupedSelectors(
+    config: SerializableInjectConfig,
+    wooSelectorOverrides: Record<string, unknown>,
+): Record<string, unknown> {
+    return {
+        ...flatSerializableSelectorsToGrouped(flatSelectorsFromSerializable(config)),
+        ...flatSerializableSelectorsToGrouped(wooSelectorOverrides),
+    };
+}
+
 /**
  * Build inject config from global + optional product Configurator Setup (ov25-setup) JSON.
  */
@@ -618,13 +657,17 @@ function buildConfig(): Record<string, unknown> {
         selectorOverrides.configureButtonSelector = { id: s.configureButtonSelector.trim(), replace: true };
     }
 
+    const mergedSelectors = buildMergedGroupedSelectors(config, selectorOverrides);
+
+    const denyFromStored = INJECT_DENYLIST_FROM_STORED_SERIALIZABLE;
+    const forwarded = omitKeys(config as Record<string, unknown>, denyFromStored);
+
     const out: Record<string, unknown> = {
+        ...forwarded,
         apiKey,
         productLink,
         images: s.images || [],
-        ...flatSelectorsFromSerializable(config),
-        ...serializableToLegacyInjectFields(config),
-        ...selectorOverrides,
+        selectors: mergedSelectors,
     };
 
     const extraCss = s.customCSS?.trim();
@@ -634,8 +677,10 @@ function buildConfig(): Record<string, unknown> {
 
     if (s.useSimpleConfigureButton) {
         out.useSimpleVariantsSelector = true;
-        out.configureButtonSelector =
-            selectorOverrides.configureButtonSelector || { id: '[data-ov25-configure-button]', replace: true };
+        (out.selectors as Record<string, unknown>).configureButton =
+            (out.selectors as Record<string, unknown>).configureButton ||
+            selectorOverrides.configureButtonSelector ||
+            { id: '[data-ov25-configure-button]', replace: true };
     }
 
     return out;
@@ -656,113 +701,52 @@ function flatSelectorsFromSerializable(config: SerializableInjectConfig): Record
     return result;
 }
 
-/**
- * Maps ov25-setup / Configurator Setup JSON into legacy flat inject fields read by
- * normalizeInjectConfig when options are not grouped (no `callbacks` wrapper).
- */
-function serializableToLegacyInjectFields(config: SerializableInjectConfig): Record<string, unknown> {
-    const result: Record<string, unknown> = {};
-
-    const car = config.carousel;
-    if (car?.desktop) {
-        result.carouselDisplayMode = car.desktop;
-    }
-    if (car?.mobile) {
-        result.carouselDisplayModeMobile = car.mobile;
-    }
-
-    const conf = config.configurator;
-    if (conf?.displayMode) {
-        const dm = conf.displayMode;
-        if (dm.desktop) {
-            result.configuratorDisplayMode = dm.desktop;
-        }
-        if (dm.mobile) {
-            result.configuratorDisplayModeMobile = dm.mobile;
-        }
-    }
-    if (conf?.triggerStyle) {
-        if (conf.triggerStyle.desktop) {
-            result.configuratorTriggerStyle = conf.triggerStyle.desktop;
-        }
-        if (conf.triggerStyle.mobile) {
-            result.configuratorTriggerStyleMobile = conf.triggerStyle.mobile;
-        }
-    }
-    if (conf?.variants?.displayMode) {
-        const vdm = conf.variants.displayMode;
-        if (vdm.desktop) {
-            result.variantDisplayMode = vdm.desktop;
-        }
-        if (vdm.mobile) {
-            result.variantDisplayModeMobile = vdm.mobile;
-        }
-    }
-    if (conf?.variants && conf.variants.useSimpleVariantsSelector !== undefined) {
-        result.useSimpleVariantsSelector = conf.variants.useSimpleVariantsSelector;
-    }
-    const vHide = conf?.variants?.hideOptions;
-    if (Array.isArray(vHide) && vHide.length > 0) {
-        result.hideOptions = vHide.filter((x): x is string => typeof x === 'string' && x.trim() !== '');
-    }
-
-    if (config.flags) {
-        Object.assign(result, config.flags);
-    }
-
-    if (config.branding) {
-        if (config.branding.logoURL) {
-            result.logoURL = config.branding.logoURL;
-        }
-        if (config.branding.mobileLogoURL) {
-            result.mobileLogoURL = config.branding.mobileLogoURL;
-        }
-        if (config.branding.cssString) {
-            result.cssString = config.branding.cssString;
-        }
-    }
-
-    return result;
-}
-
 const doInject = () => {
     const config = buildConfig();
     if (!config.apiKey) return;
 
+    const { apiKey, productLink, images, selectors, ...restFromBuild } = config;
+
     OV25.injectConfigurator({
-        ...config,
-        addToBasketFunction: async (payload?: OnChangePayload) => {
-            try {
-                if (window.ov25Settings?.useNativeCartSubmit) {
-                    await submitProductCartViaNativeForm(payload, false);
-                } else {
-                    await submitProductCartWithThumbnail(payload, false);
+        ...restFromBuild,
+        apiKey,
+        productLink,
+        images,
+        selectors,
+        callbacks: {
+            addToBasket: async (payload?: OnChangePayload) => {
+                try {
+                    if (window.ov25Settings?.useNativeCartSubmit) {
+                        await submitProductCartViaNativeForm(payload, false);
+                    } else {
+                        await submitProductCartWithThumbnail(payload, false);
+                    }
+                } catch (e) {
+                    console.error(OV25_WOO_LOG, 'addToBasketFunction rejected', e);
                 }
-            } catch (e) {
-                console.error(OV25_WOO_LOG, 'addToBasketFunction rejected', e);
-            }
-        },
-        buyNowFunction: async (payload?: OnChangePayload) => {
-            try {
-                if (window.ov25Settings?.useNativeCartSubmit) {
-                    await submitProductCartViaNativeForm(payload, true);
-                } else {
-                    await submitProductCartWithThumbnail(payload, true);
+            },
+            buyNow: async (payload?: OnChangePayload) => {
+                try {
+                    if (window.ov25Settings?.useNativeCartSubmit) {
+                        await submitProductCartViaNativeForm(payload, true);
+                    } else {
+                        await submitProductCartWithThumbnail(payload, true);
+                    }
+                } catch (e) {
+                    console.error(OV25_WOO_LOG, 'buyNowFunction rejected', e);
                 }
-            } catch (e) {
-                console.error(OV25_WOO_LOG, 'buyNowFunction rejected', e);
-            }
+            },
+            buySwatches: async (swatches: Swatch[], rules: SwatchRulesData) => {
+                if (!swatches.length || !rules.enabled) return;
+                try {
+                    const checkoutUrl = await createSwatchOnlyCart(swatches, rules);
+                    window.location.href = checkoutUrl || window.location.origin + '/checkout/';
+                } catch (error) {
+                    console.error('Failed to create swatch cart:', error);
+                }
+            },
         },
-        buySwatchesFunction: async (swatches: Swatch[], rules: SwatchRulesData) => {
-            if (!swatches.length || !rules.enabled) return;
-            try {
-                const checkoutUrl = await createSwatchOnlyCart(swatches, rules);
-                window.location.href = checkoutUrl || window.location.origin + '/checkout/';
-            } catch (error) {
-                console.error('Failed to create swatch cart:', error);
-            }
-        },
-    } as Parameters<typeof OV25.injectConfigurator>[0]);
+    } as unknown as Parameters<typeof OV25.injectConfigurator>[0]);
 };
 
 if (window.ov25Settings?.useSimpleConfigureButton) {
