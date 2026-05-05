@@ -5,8 +5,9 @@
  * Writes OV25 cfg data into each quote row's `variations` array so YITH's
  * request-quote template renders Key: Value rows the same way as variation attributes.
  *
- * Hooks YITH filters (yith_ywraq_add_item_data, etc.) to ensure configurator
- * metadata is preserved in the quote list.
+ * On quote → order (YITH), hooks `ywraq_from_cart_to_order_item` to copy cfg_* onto
+ * `WC_Order_Item_Product` the same way as `woocommerce_checkout_create_order_line_item`
+ * in ov25-plugin-init.php (that hook does not run for YITH’s `add_product` path).
  *
  * @package extension
  */
@@ -64,6 +65,9 @@ class OV25_YITH_RAQ_Bridge {
 		// 5. Thumbnails
 		add_filter( 'yith_ywraq_item_thumbnail', array( __CLASS__, 'override_thumbnail' ), 10, 2 );
 		add_filter( 'ywraq_quote_item_thumbnail', array( __CLASS__, 'override_thumbnail' ), 10, 2 );
+
+		// 6. Quote request → WC order line meta (Premium; see class.yith-ywraq-order-request.php).
+		add_action( 'ywraq_from_cart_to_order_item', array( __CLASS__, 'add_ov25_meta_to_quote_order_line' ), 10, 4 );
 	}
 
 	/**
@@ -409,6 +413,66 @@ class OV25_YITH_RAQ_Bridge {
 			return "<img src='{$src}' alt='{$alt}' />";
 		}
 		return $thumbnail;
+	}
+
+	/**
+	 * After YITH adds a line from the RAQ cart to the quote order, copy OV25 cfg_* to order item meta.
+	 * Mirrors ov25-plugin-init.php → woocommerce_checkout_create_order_line_item (that hook is not fired here).
+	 *
+	 * @param array<string, mixed> $values         Cart line from RAQ (includes cfg_* when bridge persisted them).
+	 * @param string               $cart_item_key  Cart hash (unused).
+	 * @param int                  $item_id        New order line item id.
+	 * @param WC_Order             $order          Quote order.
+	 */
+	public static function add_ov25_meta_to_quote_order_line( $values, $cart_item_key, $item_id, $order ) {
+		unset( $cart_item_key );
+		if ( ! is_array( $values ) || ! $item_id || ! $order instanceof WC_Order ) {
+			return;
+		}
+
+		$item = $order->get_item( $item_id );
+		if ( ! $item instanceof WC_Order_Item_Product ) {
+			return;
+		}
+
+		try {
+			if ( ! empty( $values['ov25_multi_line_group'] ) && ! empty( $values['cfg_skumap'] ) && function_exists( 'ov25_part_label_from_cfg_skumap' ) ) {
+				$part_label = ov25_part_label_from_cfg_skumap( $values['cfg_skumap'] );
+				if ( '' !== $part_label ) {
+					$item->add_meta_data( 'PART', $part_label, true );
+				}
+			}
+
+			if ( ! empty( $values['cfg_sku'] ) ) {
+				$sku_display = function_exists( 'ov25_trim_trailing_separator' )
+					? ov25_trim_trailing_separator( $values['cfg_sku'] )
+					: (string) $values['cfg_sku'];
+				$item->add_meta_data( 'SKU', $sku_display, true );
+			}
+
+			if ( ! empty( $values['cfg_skumap'] ) ) {
+				$sku_map = self::parse_cfg_skumap_array( $values['cfg_skumap'] );
+				if ( is_array( $sku_map ) ) {
+					foreach ( $sku_map as $key => $value ) {
+						if ( in_array( $key, self::SKUMAP_SKIP, true ) ) {
+							continue;
+						}
+						if ( ! is_scalar( $value ) ) {
+							continue;
+						}
+						$display = function_exists( 'ov25_trim_trailing_separator' )
+							? ov25_trim_trailing_separator( $value )
+							: (string) $value;
+						$item->add_meta_data( (string) $key, $display, true );
+					}
+				}
+			}
+		} catch ( Exception $e ) {
+			error_log( 'OV25 YITH RAQ bridge: order line meta — ' . $e->getMessage() );
+			return;
+		}
+
+		$item->save();
 	}
 
 	/**
