@@ -45,21 +45,23 @@ class OV25_YITH_RAQ_Bridge {
 	 * Register hooks.
 	 */
 	public static function init() {
-		// 1. Capture/Inject Phase
-		// Priority A: Use the specific filter that allows modifying the item before it's saved (Premium/Newer)
-		add_filter( 'ywraq_raq_content_before_add_item', array( __CLASS__, 'inject_before_add' ), 10, 2 );
+		// 1. Persist cfg on the quote row as YITH builds it (Premium; most reliable on live sites).
+		add_filter( 'ywraq_add_item', array( __CLASS__, 'filter_ywraq_add_item' ), 10, 2 );
 
-		// Priority B: Fallback - capture POST and patch after update (Free/Older)
+		// 2. Some builds only filter quote_content before merge — often a no-op if the key is not set yet.
+		add_filter( 'ywraq_raq_content_before_add_item', array( __CLASS__, 'inject_before_add' ), 10, 3 );
+
+		// 3. Fallback when ywraq_add_item is absent or POST is not merged: capture + patch after session write.
 		add_filter( 'ywraq_ajax_add_item_is_valid', array( __CLASS__, 'capture_posted_data' ), 10, 2 );
 		add_action( 'yith_raq_updated', array( __CLASS__, 'maybe_patch_session' ) );
 
-		// 2. Display Phase
+		// 4. Display Phase
 		// Free version hook
 		add_filter( 'ywraq_request_quote_view_item_data', array( __CLASS__, 'add_display_rows' ), 10, 3 );
 		// Premium version hook
 		add_filter( 'ywraq_item_data', array( __CLASS__, 'add_display_rows_premium' ), 10, 2 );
 
-		// 3. Thumbnails
+		// 5. Thumbnails
 		add_filter( 'yith_ywraq_item_thumbnail', array( __CLASS__, 'override_thumbnail' ), 10, 2 );
 		add_filter( 'ywraq_quote_item_thumbnail', array( __CLASS__, 'override_thumbnail' ), 10, 2 );
 	}
@@ -67,11 +69,13 @@ class OV25_YITH_RAQ_Bridge {
 	/**
 	 * Clean injection point for newer/premium versions.
 	 *
-	 * @param array $quote_content Existing content.
-	 * @param array $product_raq   Data being added.
+	 * @param array      $quote_content Existing content.
+	 * @param array      $product_raq   Data being added.
+	 * @param array|null $unused_draft_row Optional third arg on some YITH versions (unused).
 	 * @return array
 	 */
-	public static function inject_before_add( $quote_content, $product_raq ) {
+	public static function inject_before_add( $quote_content, $product_raq, $unused_draft_row = null ) {
+		unset( $unused_draft_row );
 		$product_id   = $product_raq['product_id'] ?? 0;
 		$variation_id = $product_raq['variation_id'] ?? 0;
 		$item_key     = self::yith_raq_item_key( $product_id, $variation_id );
@@ -99,6 +103,51 @@ class OV25_YITH_RAQ_Bridge {
 	}
 
 	/**
+	 * YITH filter: merge OV25 cfg_* and variation display rows onto the quote item before it is stored.
+	 *
+	 * @param array<string, mixed> $raq         Quote row.
+	 * @param array<string, mixed> $unused_product_raq Incoming product/add payload (unused; values read from $_POST).
+	 * @return array<string, mixed>
+	 */
+	public static function filter_ywraq_add_item( $raq, $unused_product_raq ) {
+		unset( $unused_product_raq );
+		if ( ! is_array( $raq ) ) {
+			return $raq;
+		}
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing
+		$cfg = array();
+		foreach ( self::CFG_KEYS as $key ) {
+			if ( isset( $_POST[ $key ] ) && '' !== $_POST[ $key ] ) {
+				$cfg[ $key ] = self::sanitize_cfg( $key, wp_unslash( $_POST[ $key ] ) );
+			}
+		}
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		if ( empty( $cfg ) ) {
+			return $raq;
+		}
+
+		if ( function_exists( 'ov25_maybe_normalize_snap2_cart_item_data' ) ) {
+			$cfg = ov25_maybe_normalize_snap2_cart_item_data( $cfg );
+		}
+
+		foreach ( $cfg as $k => $v ) {
+			$raq[ $k ] = $v;
+		}
+
+		$extra = self::build_variation_rows( $cfg );
+		if ( ! empty( $extra ) ) {
+			if ( ! isset( $raq['variations'] ) || ! is_array( $raq['variations'] ) ) {
+				$raq['variations'] = array();
+			}
+			$raq['variations'] = array_merge( $raq['variations'], $extra );
+		}
+
+		return $raq;
+	}
+
+	/**
 	 * Premium display hook wrapper.
 	 */
 	public static function add_display_rows_premium( $data, $item ) {
@@ -117,9 +166,13 @@ class OV25_YITH_RAQ_Bridge {
 				}
 			}
 			if ( ! empty( $cfg ) ) {
+				// phpcs:disable WordPress.Security.NonceVerification.Missing
+				$variation_id = isset( $_POST['variation_id'] ) ? absint( wp_unslash( $_POST['variation_id'] ) ) : 0;
+				// phpcs:enable WordPress.Security.NonceVerification.Missing
 				self::$captured = array(
-					'product_id' => $product_id,
-					'data'       => $cfg,
+					'product_id'    => $product_id,
+					'variation_id'  => $variation_id,
+					'data'          => $cfg,
 				);
 			}
 		}
@@ -136,13 +189,18 @@ class OV25_YITH_RAQ_Bridge {
 
 		$rq  = YITH_Request_Quote();
 		$raq = $rq->get_raq_for_session();
-		$item_key = self::yith_raq_item_key( self::$captured['product_id'], 0 );
+		$variation_id = isset( self::$captured['variation_id'] ) ? absint( self::$captured['variation_id'] ) : 0;
+		$item_key     = self::yith_raq_item_key( self::$captured['product_id'], $variation_id );
 
 		if ( isset( $raq[ $item_key ] ) ) {
-			foreach ( self::$captured['data'] as $k => $v ) {
+			$patch_cfg = self::$captured['data'];
+			if ( function_exists( 'ov25_maybe_normalize_snap2_cart_item_data' ) ) {
+				$patch_cfg = ov25_maybe_normalize_snap2_cart_item_data( $patch_cfg );
+			}
+			foreach ( $patch_cfg as $k => $v ) {
 				$raq[ $item_key ][ $k ] = $v;
 			}
-			$extra = self::build_variation_rows( self::$captured['data'] );
+			$extra = self::build_variation_rows( $patch_cfg );
 			if ( ! empty( $extra ) ) {
 				if ( ! isset( $raq[ $item_key ]['variations'] ) ) {
 					$raq[ $item_key ]['variations'] = array();
