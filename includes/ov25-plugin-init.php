@@ -118,6 +118,14 @@ function ov25_woo_extension_init() {
 			}
 		}
 
+		$yith_raq_bridge_file = dirname( MAIN_PLUGIN_FILE ) . '/includes/class-ov25-yith-raq-bridge.php';
+		if ( file_exists( $yith_raq_bridge_file ) ) {
+			require_once $yith_raq_bridge_file;
+			if ( class_exists( 'OV25_YITH_RAQ_Bridge' ) ) {
+				OV25_YITH_RAQ_Bridge::init();
+			}
+		}
+
 		$swatch_api_file = dirname( MAIN_PLUGIN_FILE ) . '/includes/class-swatch-api.php';
 		if ( file_exists( $swatch_api_file ) ) {
 			include_once $swatch_api_file;
