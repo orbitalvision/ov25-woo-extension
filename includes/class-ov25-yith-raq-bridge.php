@@ -45,28 +45,71 @@ class OV25_YITH_RAQ_Bridge {
 	 * Register hooks.
 	 */
 	public static function init() {
-		self::log( 'init() called - using discovered YITH hooks' );
+		// 1. Capture/Inject Phase
+		// Priority A: Use the specific filter that allows modifying the item before it's saved (Premium/Newer)
+		add_filter( 'ywraq_raq_content_before_add_item', array( __CLASS__, 'inject_before_add' ), 10, 2 );
 
-		// Capture data before it's added.
+		// Priority B: Fallback - capture POST and patch after update (Free/Older)
 		add_filter( 'ywraq_ajax_add_item_is_valid', array( __CLASS__, 'capture_posted_data' ), 10, 2 );
-
-		// Patch the session after it's updated.
 		add_action( 'yith_raq_updated', array( __CLASS__, 'maybe_patch_session' ) );
 
-		// Display data in the quote list view.
+		// 2. Display Phase
+		// Free version hook
 		add_filter( 'ywraq_request_quote_view_item_data', array( __CLASS__, 'add_display_rows' ), 10, 3 );
+		// Premium version hook
+		add_filter( 'ywraq_item_data', array( __CLASS__, 'add_display_rows_premium' ), 10, 2 );
+
+		// 3. Thumbnails
+		add_filter( 'yith_ywraq_item_thumbnail', array( __CLASS__, 'override_thumbnail' ), 10, 2 );
+		add_filter( 'ywraq_quote_item_thumbnail', array( __CLASS__, 'override_thumbnail' ), 10, 2 );
 	}
 
 	/**
-	 * Captures the POST data into a static property so we can use it in the action hook later.
+	 * Clean injection point for newer/premium versions.
 	 *
-	 * @param bool $is_valid   Original validity.
-	 * @param int  $product_id Product ID.
-	 * @return bool
+	 * @param array $quote_content Existing content.
+	 * @param array $product_raq   Data being added.
+	 * @return array
+	 */
+	public static function inject_before_add( $quote_content, $product_raq ) {
+		$product_id   = $product_raq['product_id'] ?? 0;
+		$variation_id = $product_raq['variation_id'] ?? 0;
+		$item_key     = self::yith_raq_item_key( $product_id, $variation_id );
+
+		if ( isset( $quote_content[ $item_key ] ) ) {
+			$cfg = array();
+			foreach ( self::CFG_KEYS as $key ) {
+				if ( isset( $_POST[ $key ] ) && '' !== $_POST[ $key ] ) {
+					$val = self::sanitize_cfg( $key, wp_unslash( $_POST[ $key ] ) );
+					$quote_content[ $item_key ][ $key ] = $val;
+					$cfg[ $key ] = $val;
+				}
+			}
+			if ( ! empty( $cfg ) ) {
+				$extra = self::build_variation_rows( $cfg );
+				if ( ! empty( $extra ) ) {
+					if ( ! isset( $quote_content[ $item_key ]['variations'] ) ) {
+						$quote_content[ $item_key ]['variations'] = array();
+					}
+					$quote_content[ $item_key ]['variations'] = array_merge( $quote_content[ $item_key ]['variations'], $extra );
+				}
+			}
+		}
+		return $quote_content;
+	}
+
+	/**
+	 * Premium display hook wrapper.
+	 */
+	public static function add_display_rows_premium( $data, $item ) {
+		return self::add_display_rows( $data, $item, null );
+	}
+
+	/**
+	 * Captures the POST data into a static property.
 	 */
 	public static function capture_posted_data( $is_valid, $product_id ) {
 		if ( $is_valid ) {
-			self::log( 'capture_posted_data() called for product ' . $product_id );
 			$cfg = array();
 			foreach ( self::CFG_KEYS as $key ) {
 				if ( isset( $_POST[ $key ] ) && '' !== $_POST[ $key ] ) {
@@ -78,57 +121,49 @@ class OV25_YITH_RAQ_Bridge {
 					'product_id' => $product_id,
 					'data'       => $cfg,
 				);
-				self::log( 'Captured ' . count( $cfg ) . ' keys' );
 			}
 		}
 		return $is_valid;
 	}
 
 	/**
-	 * Patches the session if we have captured data.
+	 * Patches the session fallback.
 	 */
 	public static function maybe_patch_session() {
 		if ( empty( self::$captured ) ) {
 			return;
 		}
 
-		self::log( 'maybe_patch_session() fired' );
-
 		$rq  = YITH_Request_Quote();
 		$raq = $rq->get_raq_for_session();
-
-		// We don't have variation_id here easily, so we try simple first.
-		$item_key = md5( (string) self::$captured['product_id'] );
+		$item_key = self::yith_raq_item_key( self::$captured['product_id'], 0 );
 
 		if ( isset( $raq[ $item_key ] ) ) {
-			self::log( "Patching item {$item_key} in session" );
 			foreach ( self::$captured['data'] as $k => $v ) {
 				$raq[ $item_key ][ $k ] = $v;
 			}
-
-			// Clean up captured data to avoid double patching.
+			$extra = self::build_variation_rows( self::$captured['data'] );
+			if ( ! empty( $extra ) ) {
+				if ( ! isset( $raq[ $item_key ]['variations'] ) ) {
+					$raq[ $item_key ]['variations'] = array();
+				}
+				$raq[ $item_key ]['variations'] = array_merge( $raq[ $item_key ]['variations'], $extra );
+			}
 			self::$captured = array();
-
-			// Update session (avoid infinite loop by removing action).
 			remove_action( 'yith_raq_updated', array( __CLASS__, 'maybe_patch_session' ) );
 			$rq->set_session( $raq );
 			add_action( 'yith_raq_updated', array( __CLASS__, 'maybe_patch_session' ) );
-			self::log( 'Session patched successfully' );
-		} else {
-			self::log( "Item key {$item_key} not found in session keys: " . implode( ', ', array_keys( $raq ) ) );
+			self::log( 'Session patched via fallback' );
 		}
 	}
 
 	/**
 	 * Adds the configuration breakdown to the display array.
-	 *
-	 * @param array      $data     Existing display rows.
-	 * @param array      $raq_item Quote item data.
-	 * @param WC_Product $_product Product object.
-	 * @return array
 	 */
-	public static function add_display_rows( $data, $raq_item, $_product ) {
-		self::log( 'add_display_rows() called' );
+	public static function add_display_rows( $data, $raq_item, $_product = null ) {
+		if ( ! is_array( $data ) ) {
+			$data = array();
+		}
 		$extra = self::build_variation_rows( $raq_item );
 		if ( ! empty( $extra ) ) {
 			foreach ( $extra as $label => $value ) {
