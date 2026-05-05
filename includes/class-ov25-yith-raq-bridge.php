@@ -412,34 +412,31 @@ class OV25_YITH_RAQ_Bridge {
 	}
 
 	/**
-	 * Human-readable SKU line for the quote table when cfg_skumap exists.
-	 * Raw cfg_sku is still the configurator aggregate (often a single concatenated skuString);
-	 * this only affects the displayed "SKU" row merged into variations / item_data.
+	 * Optional compact SKU line (parenthetical segments). Used only when
+	 * `ov25_yith_raq_show_aggregate_sku_row` is true — default is label-only rows from skumap.
 	 *
 	 * @param array<string, string> $cfg Sanitized cfg_* values.
 	 * @return string Empty if nothing to show.
 	 */
 	private static function quote_table_sku_display( array $cfg ) {
-		if ( ! empty( $cfg['cfg_skumap'] ) ) {
-			$map = json_decode( $cfg['cfg_skumap'], true );
-			if ( is_array( $map ) ) {
-				$parts = array();
-				foreach ( $map as $label => $value ) {
-					if ( in_array( $label, self::SKUMAP_SKIP, true ) ) {
-						continue;
-					}
-					if ( '' === (string) $label || ! is_scalar( $value ) || '' === (string) $value ) {
-						continue;
-					}
-					$key = strtolower( (string) preg_replace( '/\s+/', '', (string) $label ) );
-					$val = self::label_words_to_pascal_token( (string) $value );
-					if ( '' !== $key && '' !== $val ) {
-						$parts[] = sprintf( '(%s-%s)', $key, $val );
-					}
+		$map = self::parse_cfg_skumap_array( $cfg['cfg_skumap'] ?? '' );
+		if ( is_array( $map ) ) {
+			$parts = array();
+			foreach ( $map as $label => $value ) {
+				if ( in_array( $label, self::SKUMAP_SKIP, true ) ) {
+					continue;
 				}
-				if ( ! empty( $parts ) ) {
-					return implode( '', $parts );
+				if ( '' === (string) $label || ! is_scalar( $value ) || '' === (string) $value ) {
+					continue;
 				}
+				$key = strtolower( (string) preg_replace( '/\s+/', '', (string) $label ) );
+				$val = self::label_words_to_pascal_token( (string) $value );
+				if ( '' !== $key && '' !== $val ) {
+					$parts[] = sprintf( '(%s-%s)', $key, $val );
+				}
+			}
+			if ( ! empty( $parts ) ) {
+				return implode( '', $parts );
 			}
 		}
 
@@ -450,6 +447,38 @@ class OV25_YITH_RAQ_Bridge {
 		}
 
 		return '';
+	}
+
+	/**
+	 * Decodes cfg_skumap whether it is raw JSON or URL-encoded JSON (e.g. from encoded form posts).
+	 *
+	 * @param mixed $raw Stored or posted cfg_skumap string.
+	 * @return array<string, mixed>|null
+	 */
+	private static function parse_cfg_skumap_array( $raw ) {
+		if ( ! is_string( $raw ) || '' === trim( $raw ) ) {
+			return null;
+		}
+		$str = trim( $raw );
+		$candidates = array_unique(
+			array_filter(
+				array(
+					$str,
+					rawurldecode( $str ),
+					urldecode( $str ),
+				),
+				static function ( $s ) {
+					return is_string( $s ) && '' !== $s;
+				}
+			)
+		);
+		foreach ( $candidates as $candidate ) {
+			$map = json_decode( $candidate, true );
+			if ( is_array( $map ) ) {
+				return $map;
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -482,26 +511,33 @@ class OV25_YITH_RAQ_Bridge {
 	 */
 	private static function build_variation_rows( array $cfg ) {
 		$rows = array();
+		$map  = self::parse_cfg_skumap_array( $cfg['cfg_skumap'] ?? '' );
 
-		if ( ! empty( $cfg['cfg_skumap'] ) ) {
-			$map = json_decode( $cfg['cfg_skumap'], true );
-			if ( is_array( $map ) ) {
-				foreach ( $map as $label => $value ) {
-					if ( in_array( $label, self::SKUMAP_SKIP, true ) ) {
-						continue;
-					}
-					if ( '' !== (string) $label && is_scalar( $value ) && '' !== (string) $value ) {
-						$rows[ (string) $label ] = function_exists( 'ov25_trim_trailing_separator' )
-							? ov25_trim_trailing_separator( $value )
-							: (string) $value;
-					}
+		if ( is_array( $map ) ) {
+			foreach ( $map as $label => $value ) {
+				if ( in_array( $label, self::SKUMAP_SKIP, true ) ) {
+					continue;
+				}
+				if ( '' !== (string) $label && is_scalar( $value ) && '' !== (string) $value ) {
+					$rows[ (string) $label ] = function_exists( 'ov25_trim_trailing_separator' )
+						? ov25_trim_trailing_separator( $value )
+						: (string) $value;
 				}
 			}
 		}
 
-		$sku_display = self::quote_table_sku_display( $cfg );
-		if ( '' !== $sku_display ) {
-			$rows['SKU'] = $sku_display;
+		$skumap_label_rows = count( $rows );
+		if ( $skumap_label_rows > 0 ) {
+			if ( apply_filters( 'ov25_yith_raq_show_aggregate_sku_row', false, $cfg, $rows ) ) {
+				$compact = self::quote_table_sku_display( $cfg );
+				if ( '' !== $compact ) {
+					$rows['SKU'] = $compact;
+				}
+			}
+		} elseif ( ! empty( $cfg['cfg_sku'] ) ) {
+			$rows['SKU'] = function_exists( 'ov25_trim_trailing_separator' )
+				? ov25_trim_trailing_separator( $cfg['cfg_sku'] )
+				: (string) $cfg['cfg_sku'];
 		}
 
 		return $rows;
@@ -558,13 +594,45 @@ class OV25_YITH_RAQ_Bridge {
 	 * @return string
 	 */
 	private static function sanitize_cfg( $key, $value ) {
-		if ( 'cfg_skumap' === $key || 'cfg_payload' === $key ) {
-			$str = is_string( $value ) ? $value : '';
+		if ( 'cfg_skumap' === $key ) {
+			$str = is_string( $value ) ? trim( $value ) : '';
 			if ( '' === $str ) {
 				return '';
 			}
-			$decoded = json_decode( $str, true );
-			return ( null !== $decoded ) ? $str : '';
+			$map = self::parse_cfg_skumap_array( $str );
+			return is_array( $map ) ? wp_json_encode( $map, JSON_UNESCAPED_UNICODE ) : '';
+		}
+		if ( 'cfg_payload' === $key ) {
+			$str = is_string( $value ) ? trim( $value ) : '';
+			if ( '' === $str ) {
+				return '';
+			}
+			$candidates = array_unique(
+				array_filter(
+					array(
+						$str,
+						rawurldecode( $str ),
+						urldecode( $str ),
+					),
+					static function ( $s ) {
+						return is_string( $s ) && '' !== $s;
+					}
+				)
+			);
+			foreach ( $candidates as $candidate ) {
+				$decoded = json_decode( $candidate, true );
+				if ( null !== $decoded ) {
+					return wp_json_encode( $decoded, JSON_UNESCAPED_UNICODE );
+				}
+			}
+			return '';
+		}
+		if ( 'cfg_sku' === $key ) {
+			$str = is_string( $value ) ? $value : (string) $value;
+			if ( preg_match( '/%[0-9A-Fa-f]{2}/', $str ) ) {
+				$str = rawurldecode( $str );
+			}
+			return sanitize_text_field( trim( $str ) );
 		}
 		if ( 'cfg_price' === $key && function_exists( 'wc_format_decimal' ) ) {
 			return (string) wc_format_decimal( $value );
