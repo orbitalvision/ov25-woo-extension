@@ -412,6 +412,69 @@ class OV25_YITH_RAQ_Bridge {
 	}
 
 	/**
+	 * Human-readable SKU line for the quote table when cfg_skumap exists.
+	 * Raw cfg_sku is still the configurator aggregate (often a single concatenated skuString);
+	 * this only affects the displayed "SKU" row merged into variations / item_data.
+	 *
+	 * @param array<string, string> $cfg Sanitized cfg_* values.
+	 * @return string Empty if nothing to show.
+	 */
+	private static function quote_table_sku_display( array $cfg ) {
+		if ( ! empty( $cfg['cfg_skumap'] ) ) {
+			$map = json_decode( $cfg['cfg_skumap'], true );
+			if ( is_array( $map ) ) {
+				$parts = array();
+				foreach ( $map as $label => $value ) {
+					if ( in_array( $label, self::SKUMAP_SKIP, true ) ) {
+						continue;
+					}
+					if ( '' === (string) $label || ! is_scalar( $value ) || '' === (string) $value ) {
+						continue;
+					}
+					$key = strtolower( (string) preg_replace( '/\s+/', '', (string) $label ) );
+					$val = self::label_words_to_pascal_token( (string) $value );
+					if ( '' !== $key && '' !== $val ) {
+						$parts[] = sprintf( '(%s-%s)', $key, $val );
+					}
+				}
+				if ( ! empty( $parts ) ) {
+					return implode( '', $parts );
+				}
+			}
+		}
+
+		if ( ! empty( $cfg['cfg_sku'] ) ) {
+			return function_exists( 'ov25_trim_trailing_separator' )
+				? ov25_trim_trailing_separator( $cfg['cfg_sku'] )
+				: (string) $cfg['cfg_sku'];
+		}
+
+		return '';
+	}
+
+	/**
+	 * "Tapered leg" / "Amalia Truffle" → TaperedLeg / AmaliaTruffle for compact SKU segments.
+	 */
+	private static function label_words_to_pascal_token( $s ) {
+		$s = trim( (string) $s );
+		if ( '' === $s ) {
+			return '';
+		}
+		$parts = array();
+		foreach ( preg_split( '/\s+/', $s, -1, PREG_SPLIT_NO_EMPTY ) as $w ) {
+			if ( function_exists( 'mb_strtolower' ) && function_exists( 'mb_strtoupper' ) && strlen( $w ) > 0 ) {
+				$lower = mb_strtolower( $w, 'UTF-8' );
+				$first = mb_strtoupper( mb_substr( $lower, 0, 1, 'UTF-8' ), 'UTF-8' );
+				$rest  = mb_substr( $lower, 1, null, 'UTF-8' );
+				$parts[] = $first . $rest;
+			} else {
+				$parts[] = ucfirst( strtolower( $w ) );
+			}
+		}
+		return implode( '', $parts );
+	}
+
+	/**
 	 * Flat key => value rows for YITH `variations` (template prints each as "Key: Value").
 	 *
 	 * @param array<string, string> $cfg Sanitized cfg_* values.
@@ -436,10 +499,9 @@ class OV25_YITH_RAQ_Bridge {
 			}
 		}
 
-		if ( ! empty( $cfg['cfg_sku'] ) ) {
-			$rows['SKU'] = function_exists( 'ov25_trim_trailing_separator' )
-				? ov25_trim_trailing_separator( $cfg['cfg_sku'] )
-				: (string) $cfg['cfg_sku'];
+		$sku_display = self::quote_table_sku_display( $cfg );
+		if ( '' !== $sku_display ) {
+			$rows['SKU'] = $sku_display;
 		}
 
 		return $rows;
