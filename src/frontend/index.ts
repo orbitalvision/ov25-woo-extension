@@ -32,6 +32,13 @@ declare global {
     }
 }
 
+type StringReplacementRule = {
+    trigger?: { name: string; value: string };
+    template: string;
+};
+
+type StringReplacementsConfig = Record<string, StringReplacementRule[]>;
+
 interface SerializableInjectConfig {
     selectors?: Record<string, string | { selector: string; replace: boolean }>;
     carousel?: { desktop: string; mobile: string; maxImages?: number | { desktop: number; mobile: number } };
@@ -46,6 +53,7 @@ interface SerializableInjectConfig {
     };
     flags?: Record<string, boolean>;
     branding?: { logoURL?: string; mobileLogoURL?: string; cssString?: string };
+    stringReplacements?: StringReplacementsConfig;
     [key: string]: unknown;
 }
 
