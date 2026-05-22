@@ -10,9 +10,9 @@
         "@wordpress/i18n": "^5.22.0",
         "fuzzysort": "^3.1.0",
         "lucide-react": "^0.540.0",
-        "ov25-setup": "^0.7.0",
-        "ov25-ui": "^0.7.0",
-        "ov25-ui-react18": "^0.7.0",
+        "ov25-setup": "^0.7.1",
+        "ov25-ui": "^0.7.1",
+        "ov25-ui-react18": "^0.7.1",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "sonner": "^2.0.7",
@@ -2169,11 +2169,11 @@
 
     "os-homedir": ["os-homedir@1.0.2", "", {}, "sha512-B5JU3cabzk8c67mRRd3ECmROafjYMXbuzlwtqdM8IbS8ktlTix8aFGb2bAGKrSRIlnfKwovGUUr72JUPyOb6kQ=="],
 
-    "ov25-setup": ["ov25-setup@0.7.0", "", { "dependencies": { "@codemirror/commands": "^6.10.3", "@codemirror/lang-css": "^6.3.1", "@codemirror/language": "^6.12.2", "@codemirror/state": "^6.6.0", "@codemirror/view": "^6.40.0", "@radix-ui/react-dialog": "^1.1.6", "@radix-ui/react-label": "^2.1.1", "@radix-ui/react-popover": "^1.1.4", "@radix-ui/react-scroll-area": "^1.2.2", "@radix-ui/react-select": "^2.1.4", "@radix-ui/react-slider": "^1.2.2", "@radix-ui/react-switch": "^1.1.2", "@radix-ui/react-tabs": "^1.1.2", "class-variance-authority": "^0.7.0", "clsx": "^2.1.0", "lucide-react": "^0.540.0", "ov25-ui": "0.7.0", "react-colorful": "^5.6.1", "tailwind-merge": "^2.2.0" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" } }, "sha512-5fBAwIWU5rEKwo33YG0iKkZep2CKxIA4EapXfH9P1lVYdyI9gln5wTQssBEe6u8ADMw5BOmGOlQ2r8m/4E5x7A=="],
+    "ov25-setup": ["ov25-setup@0.7.1", "", { "dependencies": { "@codemirror/commands": "^6.10.3", "@codemirror/lang-css": "^6.3.1", "@codemirror/language": "^6.12.2", "@codemirror/state": "^6.6.0", "@codemirror/view": "^6.40.0", "@radix-ui/react-dialog": "^1.1.6", "@radix-ui/react-label": "^2.1.1", "@radix-ui/react-popover": "^1.1.4", "@radix-ui/react-scroll-area": "^1.2.2", "@radix-ui/react-select": "^2.1.4", "@radix-ui/react-slider": "^1.2.2", "@radix-ui/react-switch": "^1.1.2", "@radix-ui/react-tabs": "^1.1.2", "class-variance-authority": "^0.7.0", "clsx": "^2.1.0", "lucide-react": "^0.540.0", "ov25-ui": "0.7.0", "react-colorful": "^5.6.1", "tailwind-merge": "^2.2.0" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" } }, "sha512-SlfqiMB0/B0e/AubRkK8qMfFLqV7wn4xSQ2hS+V6BbpXS6fbacDpH3b9y1d+IEHMVUZfzoZspMFtfR6SUKPmPg=="],
 
-    "ov25-ui": ["ov25-ui@0.7.0", "", { "dependencies": { "@radix-ui/react-dialog": "^1.1.10", "@radix-ui/react-icons": "^1.3.2", "@radix-ui/react-popover": "^1.1.14", "@radix-ui/react-scroll-area": "^1.2.5", "@radix-ui/react-select": "^2.2.2", "@radix-ui/react-slot": "^1.0.2", "@radix-ui/react-tabs": "^1.1.2", "@react-spring/web": "^10.0.3", "@use-gesture/react": "^10.3.1", "class-variance-authority": "^0.7.1", "clsx": "^2.1.1", "embla-carousel-react": "^8.6.0", "framer-motion": "^11.16.1", "gsap": "^3.13.0", "lucide-react": "^0.503.0", "react-qr-code": "^2.0.15", "sonner": "^1.7.1", "string-similarity-js": "^2.1.4", "tailwind-merge": "^3.2.0" }, "peerDependencies": { "react": "^19", "react-dom": "^19" } }, "sha512-JNfqNC4MChuCnuhNievADmKvz39LqeQ+DaQtnUSUERQuTHLpe1iOly+Hd0AVBjZHuRfpKpwjwsKPItu60fJ0EQ=="],
+    "ov25-ui": ["ov25-ui@0.7.1", "", { "dependencies": { "@radix-ui/react-dialog": "^1.1.10", "@radix-ui/react-icons": "^1.3.2", "@radix-ui/react-popover": "^1.1.14", "@radix-ui/react-scroll-area": "^1.2.5", "@radix-ui/react-select": "^2.2.2", "@radix-ui/react-slot": "^1.0.2", "@radix-ui/react-tabs": "^1.1.2", "@react-spring/web": "^10.0.3", "@use-gesture/react": "^10.3.1", "class-variance-authority": "^0.7.1", "clsx": "^2.1.1", "embla-carousel-react": "^8.6.0", "framer-motion": "^11.16.1", "gsap": "^3.13.0", "lucide-react": "^0.503.0", "react-qr-code": "^2.0.15", "sonner": "^1.7.1", "string-similarity-js": "^2.1.4", "tailwind-merge": "^3.2.0" }, "peerDependencies": { "react": "^19", "react-dom": "^19" } }, "sha512-bReiem9vigUlTEIT3UOatqPG6+0TLk/zl7IR2V5pOfwZE0JRqf2Nn1eVdUlPHblryoP6nOe9LbNPfGYV6lkTeQ=="],
 
-    "ov25-ui-react18": ["ov25-ui-react18@0.7.0", "", { "dependencies": { "@radix-ui/react-dialog": "^1.1.10", "@radix-ui/react-icons": "^1.3.2", "@radix-ui/react-popover": "^1.1.14", "@radix-ui/react-scroll-area": "^1.2.5", "@radix-ui/react-select": "^2.2.2", "@radix-ui/react-slot": "^1.0.2", "@radix-ui/react-tabs": "^1.1.2", "@react-spring/web": "^10.0.3", "@use-gesture/react": "^10.3.1", "class-variance-authority": "^0.7.1", "clsx": "^2.1.1", "embla-carousel-react": "^8.6.0", "framer-motion": "^11.16.1", "gsap": "^3.13.0", "lucide-react": "^0.503.0", "react-qr-code": "^2.0.15", "sonner": "^1.7.1", "string-similarity-js": "^2.1.4", "tailwind-merge": "^3.2.0" }, "peerDependencies": { "react": "^18.2.0", "react-dom": "^18.2.0" } }, "sha512-cCyABEHGrQjrDIC2ykrtpOQv+X3oifANQ62DLhh4HsIZOd6aL4QRSETj+laCfFFRTlCcM5ixOWfNcuVUOHHvHw=="],
+    "ov25-ui-react18": ["ov25-ui-react18@0.7.1", "", { "dependencies": { "@radix-ui/react-dialog": "^1.1.10", "@radix-ui/react-icons": "^1.3.2", "@radix-ui/react-popover": "^1.1.14", "@radix-ui/react-scroll-area": "^1.2.5", "@radix-ui/react-select": "^2.2.2", "@radix-ui/react-slot": "^1.0.2", "@radix-ui/react-tabs": "^1.1.2", "@react-spring/web": "^10.0.3", "@use-gesture/react": "^10.3.1", "class-variance-authority": "^0.7.1", "clsx": "^2.1.1", "embla-carousel-react": "^8.6.0", "framer-motion": "^11.16.1", "gsap": "^3.13.0", "lucide-react": "^0.503.0", "react-qr-code": "^2.0.15", "sonner": "^1.7.1", "string-similarity-js": "^2.1.4", "tailwind-merge": "^3.2.0" }, "peerDependencies": { "react": "^18.2.0", "react-dom": "^18.2.0" } }, "sha512-aapn06TGDOQfN1QQvO9NfvvG3B9+vkomQ43pwF/ng1n3PKHB6CQXR1A2cVgILiOA2GI0nBIPdgsBfAuKuagT9g=="],
 
     "own-keys": ["own-keys@1.0.1", "", { "dependencies": { "get-intrinsic": "^1.2.6", "object-keys": "^1.1.1", "safe-push-apply": "^1.0.0" } }, "sha512-qFOyK5PjiWZd+QQIh+1jhdb9LpxTF0qs7Pm8o5QHYZ0M3vKqSqzsZaEB6oWlxZ+q2sJBMI/Ktgd2N5ZwQoRHfg=="],
 
@@ -3341,6 +3341,8 @@
 
     "normalize-package-data/semver": ["semver@5.7.2", "", { "bin": "bin/semver" }, "sha512-cBznnQ9KjJqU67B52RMC65CMarK2600WFnbkcaiwWq3xy/5haFJlshgnpjovMVJ+Hff49d8GEn0b87C5pDQ10g=="],
 
+    "ov25-setup/ov25-ui": ["ov25-ui@0.7.0", "", { "dependencies": { "@radix-ui/react-dialog": "^1.1.10", "@radix-ui/react-icons": "^1.3.2", "@radix-ui/react-popover": "^1.1.14", "@radix-ui/react-scroll-area": "^1.2.5", "@radix-ui/react-select": "^2.2.2", "@radix-ui/react-slot": "^1.0.2", "@radix-ui/react-tabs": "^1.1.2", "@react-spring/web": "^10.0.3", "@use-gesture/react": "^10.3.1", "class-variance-authority": "^0.7.1", "clsx": "^2.1.1", "embla-carousel-react": "^8.6.0", "framer-motion": "^11.16.1", "gsap": "^3.13.0", "lucide-react": "^0.503.0", "react-qr-code": "^2.0.15", "sonner": "^1.7.1", "string-similarity-js": "^2.1.4", "tailwind-merge": "^3.2.0" }, "peerDependencies": { "react": "^19", "react-dom": "^19" } }, "sha512-JNfqNC4MChuCnuhNievADmKvz39LqeQ+DaQtnUSUERQuTHLpe1iOly+Hd0AVBjZHuRfpKpwjwsKPItu60fJ0EQ=="],
+
     "ov25-ui/lucide-react": ["lucide-react@0.503.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-HGGkdlPWQ0vTF8jJ5TdIqhQXZi6uh3LnNgfZ8MHiuxFfX3RZeA79r2MW2tHAZKlAVfoNE8esm3p+O6VkIvpj6w=="],
 
     "ov25-ui/sonner": ["sonner@1.7.4", "", { "peerDependencies": { "react": "^18.0.0 || ^19.0.0 || ^19.0.0-rc", "react-dom": "^18.0.0 || ^19.0.0 || ^19.0.0-rc" } }, "sha512-DIS8z4PfJRbIyfVFDVnK9rO3eYDtse4Omcm6bt0oEr5/jtLgysmjuBl1frJ9E/EQZrFmKx2A8m/s5s9CRXIzhw=="],
@@ -3726,6 +3728,12 @@
     "i18n-calypso/@wordpress/compose/@wordpress/priority-queue": ["@wordpress/priority-queue@3.22.0", "", { "dependencies": { "@babel/runtime": "7.25.7", "requestidlecallback": "^0.3.0" } }, "sha512-mu6I1svNj5dYlbd92Zs/Y0JuEizerOhf/zGlJEbuZPquu+n4MFZR89zYpm+OfXvvr9ixKXSou7J8Ca1UjrZuFw=="],
 
     "jsdom/whatwg-url/tr46": ["tr46@2.1.0", "", { "dependencies": { "punycode": "^2.1.1" } }, "sha512-15Ih7phfcdP5YxqiB+iDtLoaTz4Nd35+IiAv0kQ5FNKHzXgdWqPoTIqEDDJmXceQt4JZk6lVPT8lnDlPpGDppw=="],
+
+    "ov25-setup/ov25-ui/lucide-react": ["lucide-react@0.503.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-HGGkdlPWQ0vTF8jJ5TdIqhQXZi6uh3LnNgfZ8MHiuxFfX3RZeA79r2MW2tHAZKlAVfoNE8esm3p+O6VkIvpj6w=="],
+
+    "ov25-setup/ov25-ui/sonner": ["sonner@1.7.4", "", { "peerDependencies": { "react": "^18.0.0 || ^19.0.0 || ^19.0.0-rc", "react-dom": "^18.0.0 || ^19.0.0 || ^19.0.0-rc" } }, "sha512-DIS8z4PfJRbIyfVFDVnK9rO3eYDtse4Omcm6bt0oEr5/jtLgysmjuBl1frJ9E/EQZrFmKx2A8m/s5s9CRXIzhw=="],
+
+    "ov25-setup/ov25-ui/tailwind-merge": ["tailwind-merge@3.2.0", "", {}, "sha512-FQT/OVqCD+7edmmJpsgCsY820RTD5AkBryuG5IUqR5YQZSdj5xlH5nLgH7YPths7WsLPSpSBNneJdM8aS8aeFA=="],
 
     "pkg-dir/find-up/locate-path": ["locate-path@5.0.0", "", { "dependencies": { "p-locate": "^4.1.0" } }, "sha512-t7hw9pI+WvuwNJXwk5zVHpyhIqzg2qTlklJOf0mVxGSbe3Fp2VieZcduNYjaLDoy6p9uGpQEGWG87WpMKlNq8g=="],
 
