@@ -27,6 +27,12 @@ interface Product {
   status: boolean;
 }
 
+interface BedConfigurator {
+  id: number;
+  name: string;
+  sizes?: unknown;
+}
+
 interface ProductFieldProps {
   wooProductId: string;
   currentLink: string;
@@ -34,18 +40,20 @@ interface ProductFieldProps {
   customConfig: string;
 }
 
-type LinkType = 'product' | 'range' | 'snap2';
+type LinkType = 'product' | 'range' | 'snap2' | 'bed';
 
 function parseLinkType(link: string): { type: LinkType; id: string } | null {
   if (!link) return null;
   if (link.startsWith('snap2/')) return { type: 'snap2', id: link.slice(6) };
   if (link.startsWith('range/')) return { type: 'range', id: link.slice(6) };
+  if (link.startsWith('bed-configurator/')) return { type: 'bed', id: link.slice(17) };
   return { type: 'product', id: link };
 }
 
 function formatLink(type: LinkType, id: number): string {
   if (type === 'snap2') return `snap2/${id}`;
   if (type === 'range') return `range/${id}`;
+  if (type === 'bed') return `bed-configurator/${id}`;
   return String(id);
 }
 
@@ -53,7 +61,10 @@ const BADGE_COLORS: Record<string, string> = {
   product: '#2271b1',
   range: '#00a32a',
   snap2: '#9333ea',
+  bed: '#b45309',
 };
+
+const TEMP_PREVIEW_PRODUCT_LINK = 'bed-configurator/3';
 
 export function ProductField({ wooProductId, currentLink, useCustomConfig, customConfig }: ProductFieldProps) {
   const [link, setLink] = useState(currentLink);
@@ -62,6 +73,7 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
     try { return JSON.parse(customConfig || '{}'); } catch { return {}; }
   });
   const [ranges, setRanges] = useState<Range[]>([]);
+  const [bedConfigurators, setBedConfigurators] = useState<BedConfigurator[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -78,6 +90,10 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
     () => resolveConfiguratorConfig(settings?.configuratorConfig, admin?.configuratorConfig),
     [settings?.configuratorConfig, admin?.configuratorConfig],
   );
+  const previewApiKey = useMemo(() => {
+    const apiKey = settings?.apiKey ?? admin?.apiKey;
+    return typeof apiKey === 'string' && apiKey.trim() ? apiKey.trim() : undefined;
+  }, [settings?.apiKey, admin?.apiKey]);
 
   const rawEditorConfig = useMemo((): Record<string, unknown> => {
     const hasCustom =
@@ -104,6 +120,7 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
     api.getProductsList()
       .then((data: any) => {
         setRanges(data?.ranges || []);
+        setBedConfigurators(data?.bedConfigurators || []);
         setLoading(false);
       })
       .catch((err: Error) => {
@@ -184,8 +201,14 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
         }
       }
     }
+    if (parsed.type === 'bed') {
+      const bed = bedConfigurators.find((item) => String(item.id) === parsed.id);
+      if (bed) {
+        return { name: bed.name, rangeName: 'Bed configurator', type: 'bed' as LinkType, thumbnail: null };
+      }
+    }
     return { name: `ID: ${link}`, rangeName: 'Not found in catalog', type: parsed.type, thumbnail: null };
-  }, [parsed, ranges, link]);
+  }, [parsed, ranges, bedConfigurators, link]);
 
   /** Sort ranges so the one containing the currently linked product/range comes first */
   const sortedRanges = useMemo(() => {
@@ -224,11 +247,23 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
     }
   }, [ranges, search, parsed]);
 
+  const filteredBedConfigurators = useMemo(() => {
+    if (!search) return bedConfigurators;
+    const q = search.toLowerCase();
+    return bedConfigurators.filter((item) => item.name.toLowerCase().includes(q) || String(item.id).includes(q));
+  }, [bedConfigurators, search]);
+
+  const hasPickerResults =
+    sortedRanges.length > 0 || filteredBedConfigurators.length > 0;
+
   const isCurrentProduct = (productId: number) =>
     parsed?.type === 'product' && parsed.id === String(productId);
 
   const isCurrentRange = (rangeId: number) =>
     parsed && (parsed.type === 'range' || parsed.type === 'snap2') && parsed.id === String(rangeId);
+
+  const isCurrentStandaloneConfigurator = (type: 'bed', id: number) =>
+    parsed?.type === type && parsed.id === String(id);
 
   if (manualMode) {
     return (
@@ -241,7 +276,7 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
           type="text"
           value={link}
           onChange={(e) => { setLink(e.target.value); syncHidden('_ov25_product_id', e.target.value); }}
-          placeholder="e.g. 97, range/16, snap2/16"
+          placeholder="e.g. 97, range/16, snap2/16, bed-configurator/2"
           style={{ width: '100%', maxWidth: '400px' }}
         />
         {error && <p style={{ color: '#b32d2e', marginTop: '6px', fontSize: '12px' }}>Could not load products: {error}</p>}
@@ -295,7 +330,7 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search products, ranges..."
+              placeholder="Search products, ranges, bed configurators..."
               style={{ flex: 1 }}
               autoFocus
             />
@@ -305,7 +340,7 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
           </div>
           <div style={{ overflowY: 'auto', flex: 1 }}>
             {loading && <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>Loading products...</div>}
-            {!loading && sortedRanges.length === 0 && (
+            {!loading && !hasPickerResults && (
               <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
                 {search ? 'No matching products found.' : 'No products available. Check your private API key in OV25 settings.'}
               </div>
@@ -369,6 +404,39 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
                 })}
               </div>
             ))}
+            {filteredBedConfigurators.length > 0 && (
+              <div>
+                <div style={{ padding: '6px 12px', borderBottom: '1px solid #eee', background: '#f9f9f9', fontSize: '12px', fontWeight: 600 }}>
+                  Bed configurators
+                </div>
+                {filteredBedConfigurators.map((item) => {
+                  const isCurrent = isCurrentStandaloneConfigurator('bed', item.id);
+                  return (
+                    <div
+                      key={`bed-${item.id}`}
+                      onClick={() => handleSelect('bed', item.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px 8px 24px',
+                        borderBottom: '1px solid #f0f0f0', cursor: 'pointer',
+                        background: isCurrent ? '#e6f0ff' : '',
+                        borderLeft: isCurrent ? '3px solid #b45309' : '3px solid transparent',
+                      }}
+                      onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.background = '#f0f6fc'; }}
+                      onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.background = ''; }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 500 }}>
+                          {item.name}
+                          {isCurrent && <span style={{ marginLeft: '6px', fontSize: '11px', color: '#2271b1', fontWeight: 600 }}>● current</span>}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#888' }}>bed-configurator/{item.id}</div>
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#b45309', fontWeight: 600 }}>bed</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -424,6 +492,8 @@ export function ProductField({ wooProductId, currentLink, useCustomConfig, custo
             {editorMountKey && (
               <ConfiguratorSetup
                 key={editorMountKey}
+                apiKey={previewApiKey}
+                productLink={TEMP_PREVIEW_PRODUCT_LINK}
                 onSave={handleConfigSave}
                 className="h-full min-h-0 w-full flex"
               />

@@ -152,10 +152,32 @@ function ov25_default_configurator_layout_block() {
  * Full global configurator config (standard + snap2) when none is stored yet.
  */
 function ov25_default_configurator_config_array() {
-	$block = ov25_default_configurator_layout_block();
+	$block          = ov25_default_configurator_layout_block();
+	$bed_config     = $block;
+	$bed_config['selectors']['configureButton'] = array(
+		'selector' => '#ov25-fullscreen-button',
+		'replace'  => false,
+	);
+	$bed_config['branding'] = array(
+		'cssString' => 'ov25-selection-thumbnail: bg-white;',
+	);
+	$bed_config['bed']      = array(
+		'allowNone'                     => array(
+			'headboard' => true,
+			'base'      => true,
+			'mattress'  => true,
+		),
+		'filterSelectionsByCurrentSize' => array(
+			'headboard' => false,
+			'base'      => false,
+			'mattress'  => false,
+		),
+	);
+
 	return array(
-		'standard' => $block,
-		'snap2'    => $block,
+		'standard'        => $block,
+		'snap2'           => $block,
+		'bedConfigurator' => $bed_config,
 	);
 }
 
@@ -172,7 +194,7 @@ function ov25_get_storefront_configurator_config() {
 		return ov25_default_configurator_config_array();
 	}
 	$defaults = ov25_default_configurator_config_array();
-	foreach ( array( 'standard', 'snap2' ) as $layout ) {
+	foreach ( array( 'standard', 'snap2', 'bedConfigurator' ) as $layout ) {
 		if ( empty( $data[ $layout ] ) || ! is_array( $data[ $layout ] ) ) {
 			$data[ $layout ] = $defaults[ $layout ];
 		}

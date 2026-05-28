@@ -59,6 +59,18 @@ declare module 'ov25-ui-react18' {
     price: UnifiedPricePayload | null;
   };
 
+  export type StringReplacementRule = {
+    trigger?: { name: string; value: string };
+    template: string;
+  };
+
+  export type StringReplacementsConfig = Record<string, StringReplacementRule[]>;
+  export type BedPartFlags = { headboard: boolean; base: boolean; mattress: boolean };
+  export type BedEmbedConfig = {
+    allowNone?: BedPartFlags;
+    filterSelectionsByCurrentSize?: BedPartFlags;
+  };
+
   export function normalizeSkuPayload(data: unknown): UnifiedSkuPayload | null;
   export function normalizePricePayload(data: unknown): UnifiedPricePayload | null;
   export function parseIframeJsonPayload(data: unknown): unknown;
@@ -84,7 +96,10 @@ declare module 'ov25-ui-react18' {
     forceMobile?: boolean;
     autoOpen?: boolean;
     cssString?: string;
+    hideLogo?: boolean;
     hideOptions?: string[];
+    bed?: BedEmbedConfig;
+    stringReplacements?: StringReplacementsConfig;
     addToBasketFunction?: (payload?: OnChangePayload) => void | Promise<void>;
     buyNowFunction?: (payload?: OnChangePayload) => void | Promise<void>;
     buySwatchesFunction?: (swatches: unknown[], rules: unknown) => Promise<void>;
@@ -98,7 +113,7 @@ declare module 'ov25-ui-react18/styles.css';
 declare module 'ov25-setup' {
   import type { ComponentType } from 'react';
 
-  export type LayoutType = 'standard' | 'snap2';
+  export type LayoutType = 'standard' | 'snap2' | 'bedConfigurator';
 
   export interface SerializableInjectConfig {
     selectors?: Record<string, string | { selector: string; replace: boolean }>;
@@ -113,7 +128,12 @@ declare module 'ov25-setup' {
       };
     };
     flags?: Record<string, boolean>;
-    branding?: { logoURL?: string; mobileLogoURL?: string; cssString?: string };
+    branding?: { logoURL?: string; mobileLogoURL?: string; cssString?: string; hideLogo?: boolean };
+    bed?: {
+      allowNone?: { headboard: boolean; base: boolean; mattress: boolean };
+      filterSelectionsByCurrentSize?: { headboard: boolean; base: boolean; mattress: boolean };
+    };
+    stringReplacements?: StringReplacementsConfig;
     [key: string]: unknown;
   }
 

@@ -1,15 +1,15 @@
-interface Tab {
-  id: string;
+interface Tab<TId extends string = string> {
+  id: TId;
   label: string;
 }
 
-interface TabNavProps {
-  tabs: readonly Tab[];
-  activeTab: string;
-  onTabChange: (id: string) => void;
+interface TabNavProps<TId extends string> {
+  tabs: readonly Tab<TId>[];
+  activeTab: TId;
+  onTabChange: (id: TId) => void;
 }
 
-export function TabNav({ tabs, activeTab, onTabChange }: TabNavProps) {
+export function TabNav<TId extends string>({ tabs, activeTab, onTabChange }: TabNavProps<TId>) {
   return (
     <div className="ov25-tab-nav">
       {tabs.map((tab) => (

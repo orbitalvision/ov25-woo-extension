@@ -52,7 +52,11 @@ interface SerializableInjectConfig {
         };
     };
     flags?: Record<string, boolean>;
-    branding?: { logoURL?: string; mobileLogoURL?: string; cssString?: string };
+    branding?: { logoURL?: string; mobileLogoURL?: string; cssString?: string; hideLogo?: boolean };
+    bed?: {
+        allowNone?: { headboard: boolean; base: boolean; mattress: boolean };
+        filterSelectionsByCurrentSize?: { headboard: boolean; base: boolean; mattress: boolean };
+    };
     stringReplacements?: StringReplacementsConfig;
     [key: string]: unknown;
 }
@@ -580,10 +584,12 @@ function deepMerge<T extends Record<string, unknown>>(target: T, source: Partial
 }
 
 /**
- * Configurator layout bucket for merged JSON (still keyed as `snap2` | `standard` in stored config).
+ * Configurator layout bucket for merged JSON.
  */
-function getConfiguratorLayoutBucket(productLink: string): 'snap2' | 'standard' {
-    return productLink.startsWith('snap2/') ? 'snap2' : 'standard';
+function getConfiguratorLayoutBucket(productLink: string): 'standard' | 'snap2' | 'bedConfigurator' {
+    if (productLink.startsWith('snap2/')) return 'snap2';
+    if (productLink.startsWith('bed-configurator/')) return 'bedConfigurator';
+    return 'standard';
 }
 
 /** Stored-setup keys merged elsewhere or supplied at inject time; omit from `...config` onto inject options. */
