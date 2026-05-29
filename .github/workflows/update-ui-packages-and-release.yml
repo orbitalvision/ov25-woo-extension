@@ -1,0 +1,158 @@
+name: Update UI packages and release
+
+on:
+  workflow_dispatch:
+    inputs:
+      ui_version:
+        description: Released OV25 UI package version, for example 0.7.2
+        required: true
+        type: string
+      bump:
+        description: WooCommerce plugin version bump
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ov25-woo-release-${{ inputs.ui_version }}
+  cancel-in-progress: false
+
+jobs:
+  update-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout WooCommerce plugin
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Setup PHP and Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Wait for released UI packages
+        env:
+          UI_VERSION: ${{ inputs.ui_version }}
+        run: |
+          set -euo pipefail
+
+          if ! [[ "$UI_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid UI version: $UI_VERSION"
+            exit 1
+          fi
+
+          deadline=$((SECONDS + 1800))
+          packages=(ov25-ui ov25-ui-react18 ov25-setup)
+
+          for pkg in "${packages[@]}"; do
+            until npm view "${pkg}@${UI_VERSION}" version --registry=https://registry.npmjs.org >/dev/null 2>&1; do
+              if (( SECONDS > deadline )); then
+                echo "Timed out waiting for ${pkg}@${UI_VERSION}"
+                exit 1
+              fi
+              echo "Waiting for ${pkg}@${UI_VERSION} to appear on npm..."
+              sleep 30
+            done
+
+            npm pack "${pkg}@${UI_VERSION}" --dry-run --registry=https://registry.npmjs.org >/dev/null
+            echo "${pkg}@${UI_VERSION} is available and packable"
+          done
+
+      - name: Install exact UI package versions
+        env:
+          UI_VERSION: ${{ inputs.ui_version }}
+        run: |
+          npm install \
+            "ov25-ui@${UI_VERSION}" \
+            "ov25-ui-react18@${UI_VERSION}" \
+            "ov25-setup@${UI_VERSION}" \
+            --save-exact \
+            --legacy-peer-deps
+
+      - name: Verify UI package versions
+        env:
+          UI_VERSION: ${{ inputs.ui_version }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const version = process.env.UI_VERSION;
+          const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+
+          for (const name of ['ov25-ui', 'ov25-ui-react18', 'ov25-setup']) {
+            const actual = packageJson.dependencies?.[name];
+            if (actual !== version) {
+              throw new Error(`${name} is ${actual}, expected ${version}`);
+            }
+          }
+          NODE
+
+      - name: Run checks
+        run: npm run check-types
+
+      - name: Commit UI package update
+        env:
+          UI_VERSION: ${{ inputs.ui_version }}
+        run: |
+          set -euo pipefail
+
+          git add package.json package-lock.json
+
+          if git diff --cached --quiet; then
+            echo "WooCommerce UI packages already at ${UI_VERSION}; no dependency commit needed."
+            exit 0
+          fi
+
+          git commit -m "chore: update OV25 UI packages to ${UI_VERSION}"
+
+      - name: Run WooCommerce release script
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: npm run release -- "$BUMP"
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          PLUGIN_VERSION="$(node -p "require('./version.json').version")"
+          TAG="v${PLUGIN_VERSION}"
+          RELEASE_BODY="## OV25 WooCommerce Extension v${PLUGIN_VERSION}
+
+          ### Installation
+          1. Download the \`ov25-woo-extension.zip\` file
+          2. Upload to WordPress admin -> Plugins -> Add New -> Upload Plugin
+          3. Activate the plugin
+
+          ### Update
+          If you have the plugin installed, you should receive an automatic update notification."
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" ov25-woo-extension.zip --clobber
+          else
+            gh release create "$TAG" \
+              --title "Release ${TAG}" \
+              --notes "$RELEASE_BODY" \
+              ov25-woo-extension.zip
+          fi

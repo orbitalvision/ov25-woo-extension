@@ -32,8 +32,9 @@ try {
     process.exit(1);
   }
 
-  runCommand('npm i', 'Installing dependencies');
+  runCommand('npm i --legacy-peer-deps', 'Installing dependencies');
   runCommand(`node scripts/bump-version.js ${bumpType}`, 'Bumping version (version.json, PHP, package.json)');
+  runCommand('npm install --package-lock-only --ignore-scripts --legacy-peer-deps', 'Syncing package lock');
 
   const versionPath = path.join(rootDir, 'version.json');
   const versionData = JSON.parse(fs.readFileSync(versionPath, 'utf8'));
@@ -41,7 +42,7 @@ try {
 
   runCommand('npm run zip', 'Building and creating plugin zip');
 
-  runCommand('git add version.json ov25-woo-extension.php package.json ov25-woo-extension.zip', 'Staging version files and zip');
+  runCommand('git add version.json ov25-woo-extension.php package.json package-lock.json ov25-woo-extension.zip', 'Staging version files and zip');
   runCommand(`git commit -m "Release ${newVersion}"`, 'Committing release');
   
   // Create and push tag
