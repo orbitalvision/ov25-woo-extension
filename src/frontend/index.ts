@@ -338,6 +338,41 @@ function getOv25AjaxCartUrl(): string {
     return `${base}${sep}action=ov25_add_to_cart`;
 }
 
+function getOv25CartNonceUrl(): string {
+    const base = window.ov25Settings?.ajaxUrl || '/wp-admin/admin-ajax.php';
+    const sep = base.includes('?') ? '&' : '?';
+    return `${base}${sep}action=ov25_cart_nonce`;
+}
+
+/**
+ * Page-cache plugins (WP Rocket, LiteSpeed, etc.) cache the product HTML including the
+ * localized addToCartNonce, which expires after WordPress' nonce lifetime (~12h minimum).
+ * Serving that stale nonce fails the add-to-cart security check for anonymous shoppers.
+ * We instead pull a fresh nonce from the uncached admin-ajax endpoint, memoizing the
+ * request, and fall back to the localized value only if the request fails.
+ */
+let ov25FreshNoncePromise: Promise<string | null> | null = null;
+
+async function getFreshCartNonce(force = false): Promise<string> {
+    if (force || !ov25FreshNoncePromise) {
+        ov25FreshNoncePromise = fetch(getOv25CartNonceUrl(), {
+            method: 'GET',
+            credentials: 'include',
+            headers: { Accept: 'application/json' },
+            cache: 'no-store',
+        })
+            .then(r => r.json().catch(() => null))
+            .then((j: { success?: boolean; data?: { nonce?: string } } | null) =>
+                j?.success && typeof j.data?.nonce === 'string' && j.data.nonce ? j.data.nonce : null,
+            )
+            .catch(() => null);
+    }
+
+    const fresh = await ov25FreshNoncePromise;
+    if (!fresh) ov25FreshNoncePromise = null; // let a later call retry the network
+    return fresh || window.ov25Settings?.addToCartNonce || '';
+}
+
 /** Resolves WooCommerce product ID when localized id is absent (themes / blocks). */
 function getWooCommerceProductId(): number | null {
     const localized = window.ov25Settings?.wcProductId;
@@ -409,7 +444,7 @@ async function submitProductCartWithThumbnail(payload: OnChangePayload | undefin
         return;
     }
 
-    const nonce = window.ov25Settings?.addToCartNonce || '';
+    const nonce = await getFreshCartNonce();
     if (!nonce) {
         console.warn(OV25_WOO_LOG, `${action}: missing addToCart nonce (is ov25-frontend script localized?)`);
     }
@@ -448,7 +483,7 @@ async function submitProductCartWithThumbnail(payload: OnChangePayload | undefin
         }
     }
 
-    try {
+    const postCart = async () => {
         const response = await fetch(getOv25AjaxCartUrl(), {
             method: 'POST',
             credentials: 'include',
@@ -460,8 +495,25 @@ async function submitProductCartWithThumbnail(payload: OnChangePayload | undefin
         });
 
         const result = (await response.json().catch(() => null)) as
-            | { success?: boolean; data?: { redirect_url?: string; message?: string } }
+            | { success?: boolean; data?: { redirect_url?: string; message?: string; code?: string } }
             | null;
+
+        return { response, result };
+    };
+
+    try {
+        let { response, result } = await postCart();
+
+        // A page served from cache can carry a nonce that has since expired. The server
+        // flags that with code 'invalid_nonce'; fetch a fresh nonce and retry once.
+        if (!result?.success && result?.data?.code === 'invalid_nonce') {
+            const retryNonce = await getFreshCartNonce(true);
+            if (retryNonce && retryNonce !== body.nonce) {
+                console.warn(OV25_WOO_LOG, `${action}: stale add-to-cart nonce — retrying with a refreshed nonce`);
+                body.nonce = retryNonce;
+                ({ response, result } = await postCart());
+            }
+        }
 
         if (result?.success) {
             if (result.data?.redirect_url) {
@@ -896,6 +948,12 @@ if (window.ov25Settings?.wcProductId && !keepWooCommerceCartFormVisible()) {
     removeNativeWooProductForms();
     if (document.readyState !== 'loading') scheduleOv25NativeProductFormRemoval();
     else document.addEventListener('DOMContentLoaded', scheduleOv25NativeProductFormRemoval);
+}
+
+// Warm a fresh add-to-cart nonce up front so the first AJAX add-to-cart on a cached
+// page doesn't pay the round-trip (the result is memoized by getFreshCartNonce).
+if (window.ov25Settings?.wcProductId && !window.ov25Settings?.useNativeCartSubmit) {
+    void getFreshCartNonce();
 }
 
 /**

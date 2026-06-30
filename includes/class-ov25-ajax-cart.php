@@ -30,6 +30,24 @@ class OV25_Ajax_Cart {
 	public static function init() {
 		add_action( 'wp_ajax_ov25_add_to_cart', array( __CLASS__, 'handle_add_to_cart' ) );
 		add_action( 'wp_ajax_nopriv_ov25_add_to_cart', array( __CLASS__, 'handle_add_to_cart' ) );
+		add_action( 'wp_ajax_ov25_cart_nonce', array( __CLASS__, 'handle_cart_nonce' ) );
+		add_action( 'wp_ajax_nopriv_ov25_cart_nonce', array( __CLASS__, 'handle_cart_nonce' ) );
+	}
+
+	/**
+	 * Returns a freshly minted add-to-cart nonce.
+	 *
+	 * The nonce localized into the product page expires after WordPress' nonce
+	 * lifetime (as little as ~12h). Page-cache plugins (WP Rocket, LiteSpeed,
+	 * W3TC, Cloudflare APO, etc.) serve that cached HTML long after the embedded
+	 * nonce is stale, which fails the add-to-cart security check for anonymous
+	 * shoppers. The frontend fetches a fresh nonce from this endpoint instead of
+	 * trusting the cached one. admin-ajax responses are never page-cached; the
+	 * no-cache headers also keep any intermediary CDN from caching it.
+	 */
+	public static function handle_cart_nonce() {
+		nocache_headers();
+		wp_send_json_success( array( 'nonce' => wp_create_nonce( 'ov25_add_to_cart' ) ) );
 	}
 
 	/**
@@ -49,7 +67,14 @@ class OV25_Ajax_Cart {
 
 		$nonce = isset( $data['nonce'] ) ? sanitize_text_field( wp_unslash( $data['nonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'ov25_add_to_cart' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Security check failed.', 'ov25-woo-extension' ) ) );
+			// 'code' lets the frontend detect a stale (cached) nonce and retry with
+			// a freshly fetched one without matching translatable text. See handle_cart_nonce().
+			wp_send_json_error(
+				array(
+					'message' => __( 'Security check failed.', 'ov25-woo-extension' ),
+					'code'    => 'invalid_nonce',
+				)
+			);
 		}
 
 		$product_id = isset( $data['product_id'] ) ? absint( $data['product_id'] ) : 0;
