@@ -9,6 +9,9 @@ declare global {
             gallerySelector: string;
             variantsSelector: string;
             configureButtonSelector: string;
+            headerSelector: string;
+            desktopCarouselSelector: string;
+            mobileCarouselSelector: string;
             swatchesSelector: string;
             priceSelector: string;
             customCSS: string;
@@ -724,6 +727,18 @@ function buildConfig(): Record<string, unknown> {
     }
 
     const mergedSelectors = buildMergedGroupedSelectors(config, selectorOverrides);
+    const headerSelector = s.headerSelector?.trim();
+    const desktopCarouselSelector = s.desktopCarouselSelector?.trim();
+    const mobileCarouselSelector = s.mobileCarouselSelector?.trim();
+    if (headerSelector) {
+        mergedSelectors.header = headerSelector;
+    }
+    if (desktopCarouselSelector) {
+        mergedSelectors.desktopCarousel = desktopCarouselSelector;
+    }
+    if (mobileCarouselSelector) {
+        mergedSelectors.mobileCarousel = mobileCarouselSelector;
+    }
 
     const denyFromStored = INJECT_DENYLIST_FROM_STORED_SERIALIZABLE;
     const forwarded = omitKeys(config as Record<string, unknown>, denyFromStored);
@@ -757,6 +772,7 @@ function flatSelectorsFromSerializable(config: SerializableInjectConfig): Record
     if (!config.selectors) return result;
 
     for (const [key, val] of Object.entries(config.selectors)) {
+        if (key === 'header' || key === 'headerSelector') continue;
         if (typeof val === 'object' && val !== null && 'selector' in val) {
             const v = val as { selector: string; replace?: boolean };
             result[key === 'gallery' ? 'gallerySelector' : `${key}Selector`] = { id: v.selector, replace: v.replace };

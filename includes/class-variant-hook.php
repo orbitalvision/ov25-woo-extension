@@ -1,6 +1,7 @@
 <?php
 /**
  * OV25 Variant Hook
+ *  – prints the built-in sticky mobile carousel target before the variants placeholder
  *  – prints <div data-ov25-variants></div> inside the Add‑to‑Cart form
  *  – hides Woo's native variation controls for configurator products
  */
@@ -8,6 +9,12 @@
 defined( 'ABSPATH' ) || exit;
 
 class OV25_Variant_Hook {
+	private static function variants_placeholder_html( $hidden = false ) {
+		$variants_style = $hidden ? ' style="display:none"' : '';
+
+		return '<div class="ov25-sticky-mobile-carousel" data-ov25-sticky-mobile-carousel><span class="ov25-placeholder" hidden></span></div>'
+			. '<div data-ov25-variants' . $variants_style . '></div>';
+	}
 
 	public static function init() {
 		if ( is_admin() ) {
@@ -56,12 +63,12 @@ class OV25_Variant_Hook {
 		}
 
 		if ( get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes' ) {
-			echo '<div data-ov25-variants style="display:none"></div>';
+			echo self::variants_placeholder_html( true );
 			echo '<div data-ov25-configure-button></div>';
 			return;
 		}
 
-		echo '<div data-ov25-variants></div>';
+		echo self::variants_placeholder_html();
 	}
 
 	public static function render_placeholder_simple() {
@@ -75,12 +82,12 @@ class OV25_Variant_Hook {
 		}
 
 		if ( get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes' ) {
-			echo '<div data-ov25-variants style="display:none"></div>';
+			echo self::variants_placeholder_html( true );
 			echo '<div data-ov25-configure-button></div>';
 			return;
 		}
 
-		echo '<div data-ov25-variants></div>';
+		echo self::variants_placeholder_html();
 	}
 
 	public static function hide_variations_form() {
@@ -99,10 +106,10 @@ class OV25_Variant_Hook {
 		}
 
 		if ( get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes' ) {
-			return '<div data-ov25-variants style="display:none"></div><div data-ov25-configure-button></div>';
+			return self::variants_placeholder_html( true ) . '<div data-ov25-configure-button></div>';
 		}
 
-		return '<div data-ov25-variants></div>';
+		return self::variants_placeholder_html();
 	}
 
 	public static function render_block_add_to_cart_placeholder( $html, $block ) {
@@ -112,9 +119,9 @@ class OV25_Variant_Hook {
 		}
 
 		if ( get_option( 'ov25_use_simple_configure_button', 'no' ) === 'yes' ) {
-			return '<div data-ov25-variants style="display:none"></div><div data-ov25-configure-button></div>' . $html;
+			return self::variants_placeholder_html( true ) . '<div data-ov25-configure-button></div>' . $html;
 		}
 
-		return '<div data-ov25-variants></div>' . $html;
+		return self::variants_placeholder_html() . $html;
 	}
 }

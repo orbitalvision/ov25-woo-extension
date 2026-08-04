@@ -138,12 +138,15 @@ function ov25_default_configurator_layout_block() {
 			),
 		),
 		'flags'        => array(
-			'hidePricing'  => false,
-			'hideAr'       => false,
-			'deferThreeD'  => false,
-			'showOptional' => false,
-			'forceMobile'  => false,
-			'autoOpen'     => false,
+			'hidePricing'      => false,
+			'disableAddToCart' => false,
+			'disableBuyNow'    => false,
+			'hideAr'           => false,
+			'hideGestureHint'  => false,
+			'deferThreeD'      => false,
+			'showOptional'     => false,
+			'forceMobile'      => false,
+			'autoOpen'         => false,
 		),
 	);
 }
@@ -153,7 +156,27 @@ function ov25_default_configurator_layout_block() {
  */
 function ov25_default_configurator_config_array() {
 	$block          = ov25_default_configurator_layout_block();
-	$bed_config     = $block;
+	$snap2_config   = $block;
+	$snap2_config['selectors']['configureButton'] = array(
+		'selector' => '[data-ov25-configure-button]',
+		'replace'  => false,
+	);
+	$snap2_config['configurator']['displayMode']   = array(
+		'desktop' => 'modal',
+		'mobile'  => 'modal',
+	);
+	$snap2_config['configurator']['variants']['position'] = array(
+		'desktop' => 'right',
+		'mobile'  => 'right',
+	);
+	$snap2_config['configurator']['modules'] = array(
+		'position' => array(
+			'desktop' => 'right',
+			'mobile'  => 'right',
+		),
+	);
+
+	$bed_config = $block;
 	$bed_config['selectors']['configureButton'] = array(
 		'selector' => '#ov25-fullscreen-button',
 		'replace'  => false,
@@ -176,7 +199,7 @@ function ov25_default_configurator_config_array() {
 
 	return array(
 		'standard'        => $block,
-		'snap2'           => $block,
+		'snap2'           => $snap2_config,
 		'bedConfigurator' => $bed_config,
 	);
 }

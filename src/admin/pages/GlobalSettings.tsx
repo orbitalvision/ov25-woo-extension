@@ -114,6 +114,9 @@ export function GlobalSettings() {
     { key: 'priceSelector', label: 'Price Selector', type: 'text', placeholder: '[data-ov25-price]' },
     { key: 'swatchesSelector', label: 'Swatches Selector', type: 'text', placeholder: '[data-ov25-swatches]' },
     { key: 'configureButtonSelector', label: 'Configure Button Selector', type: 'text', placeholder: '[data-ov25-configure-button]' },
+    { key: 'headerSelector', label: 'Header Selector', type: 'text', placeholder: 'header' },
+    { key: 'desktopCarouselSelector', label: 'Desktop Carousel Target Selector', type: 'text', placeholder: '#desktop-carousel-target' },
+    { key: 'mobileCarouselSelector', label: 'Mobile Carousel Target Selector', type: 'text', placeholder: '#mobile-carousel-target' },
   ];
 
   const useSimpleConfigure = merged.useSimpleConfigureButton === true || merged.useSimpleConfigureButton === 'yes';
